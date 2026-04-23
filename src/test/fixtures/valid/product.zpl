@@ -1,0 +1,21 @@
+^XA
+^FX Product label: 4x2 at 8dpmm
+^PW812
+^LL406
+
+^CF0,28
+^FO20,15^FDProduct:^FS
+^CF0,40
+^FO140,10^FDWidget Deluxe^FS
+
+^CF0,22
+^FO20,70^FDSKU: WD-001-RED^FS
+^FO20,100^FDPrice: $19.99^FS
+
+^FO20,140^BY2,3,70
+^BCN,70,Y,N,N
+^FDWD001RED^FS
+
+^FO500,20^BQN,2,5
+^FDQA,https://example.com/p/WD001RED^FS
+^XZ

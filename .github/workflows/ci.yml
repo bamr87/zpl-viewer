@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and renderer tests
+        run: npm run test:unit
+
+      - name: Visual regression tests (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run test:visual
+
+      - name: Install Playwright Chromium (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright Chromium (macOS/Windows)
+        if: matrix.os != 'ubuntu-latest'
+        run: npx playwright install chromium
+
+      - name: Build extension bundles
+        run: npm run compile
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Integration tests (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: xvfb-run -a npm run test:integration
+
+      - name: Integration tests (macOS/Windows)
+        if: matrix.os != 'ubuntu-latest'
+        run: npm run test:integration
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts-${{ matrix.os }}
+          path: |
+            test-results/**
+            playwright-report/**
+            out/**

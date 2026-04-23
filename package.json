@@ -1,0 +1,310 @@
+{
+  "name": "zpl-viewer",
+  "displayName": "ZPL Viewer",
+  "description": "Comprehensive language support for Zebra Programming Language (ZPL/ZPL II): syntax highlighting, IntelliSense, hover docs, snippets, live label preview, validation, and export.",
+  "version": "0.2.0",
+  "publisher": "zpl-viewer",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Linters",
+    "Visualization"
+  ],
+  "keywords": [
+    "zpl",
+    "zebra",
+    "label",
+    "printer",
+    "barcode",
+    "zpl2",
+    "labelary"
+  ],
+  "activationEvents": [
+    "onLanguage:zpl",
+    "onCommand:zplViewer.preview",
+    "onCommand:zplViewer.previewToSide",
+    "onCommand:zplViewer.exportPng",
+    "onCommand:zplViewer.exportPdf",
+    "onCommand:zplViewer.formatDocument",
+    "onCommand:zplViewer.validate",
+    "onCommand:zplViewer.insertTemplate"
+  ],
+  "main": "./dist/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bamr87/zpl-viewer"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "zpl",
+        "aliases": [
+          "ZPL",
+          "Zebra Programming Language",
+          "zpl"
+        ],
+        "extensions": [
+          ".zpl",
+          ".zpl2",
+          ".prn",
+          ".lbl"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/file-icon.svg",
+          "dark": "./images/file-icon.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "zpl",
+        "scopeName": "source.zpl",
+        "path": "./syntaxes/zpl.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "zpl",
+        "path": "./snippets/zpl.code-snippets"
+      }
+    ],
+    "commands": [
+      {
+        "command": "zplViewer.preview",
+        "title": "ZPL: Open Label Preview",
+        "category": "ZPL",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "zplViewer.previewToSide",
+        "title": "ZPL: Open Label Preview to the Side",
+        "category": "ZPL",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "zplViewer.refreshPreview",
+        "title": "ZPL: Refresh Preview",
+        "category": "ZPL",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "zplViewer.exportPng",
+        "title": "ZPL: Export Label as PNG",
+        "category": "ZPL"
+      },
+      {
+        "command": "zplViewer.exportPdf",
+        "title": "ZPL: Export Label as PDF",
+        "category": "ZPL"
+      },
+      {
+        "command": "zplViewer.formatDocument",
+        "title": "ZPL: Format Document",
+        "category": "ZPL"
+      },
+      {
+        "command": "zplViewer.validate",
+        "title": "ZPL: Validate Document",
+        "category": "ZPL"
+      },
+      {
+        "command": "zplViewer.insertTemplate",
+        "title": "ZPL: Insert Label Template",
+        "category": "ZPL"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == zpl",
+          "command": "zplViewer.previewToSide",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceLangId == zpl",
+          "command": "zplViewer.preview",
+          "group": "zpl@1"
+        },
+        {
+          "when": "resourceLangId == zpl",
+          "command": "zplViewer.formatDocument",
+          "group": "zpl@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceLangId == zpl",
+          "command": "zplViewer.preview",
+          "group": "zpl@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "zplViewer.preview",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.previewToSide",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.refreshPreview",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.exportPng",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.exportPdf",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.formatDocument",
+          "when": "resourceLangId == zpl"
+        },
+        {
+          "command": "zplViewer.validate",
+          "when": "resourceLangId == zpl"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "zplViewer.previewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorLangId == zpl"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "ZPL Viewer",
+      "properties": {
+        "zplViewer.renderer.density": {
+          "type": "string",
+          "enum": [
+            "6dpmm",
+            "8dpmm",
+            "12dpmm",
+            "24dpmm"
+          ],
+          "default": "8dpmm",
+          "description": "Print density used when rendering labels. Matches the target printer's resolution."
+        },
+        "zplViewer.label.widthInches": {
+          "type": "number",
+          "default": 4,
+          "minimum": 0.25,
+          "maximum": 15,
+          "description": "Label width in inches."
+        },
+        "zplViewer.label.heightInches": {
+          "type": "number",
+          "default": 6,
+          "minimum": 0.25,
+          "maximum": 30,
+          "description": "Label height in inches."
+        },
+        "zplViewer.preview.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh the preview as the document changes."
+        },
+        "zplViewer.preview.autoRefreshDelay": {
+          "type": "number",
+          "default": 400,
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "Debounce delay (ms) for preview auto-refresh."
+        },
+        "zplViewer.preview.initialZoom": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0.25,
+          "maximum": 8,
+          "description": "Initial display scale for the preview (1 = 1 dot per pixel)."
+        },
+        "zplViewer.format.uppercaseCommands": {
+          "type": "boolean",
+          "default": true,
+          "description": "Uppercase ZPL commands when formatting."
+        },
+        "zplViewer.format.oneCommandPerLine": {
+          "type": "boolean",
+          "default": true,
+          "description": "Place each ZPL command on its own line when formatting."
+        },
+        "zplViewer.validation.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable diagnostics for ZPL documents."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[zpl]": {
+        "editor.wordWrap": "on",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p ./tsconfig.test.json --outDir out",
+    "watch-tests": "tsc -p ./tsconfig.test.json -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/draw.test.js\"",
+    "test:visual": "npm run compile-tests && mocha \"out/test/renderer/visual/**/*.test.js\"",
+    "test:visual:update": "cross-env UPDATE_GOLDENS=1 npm run test:visual",
+    "test:integration": "npm run compile-tests && cross-env VSCODE_ZPL_TEST=1 node ./out/test/runTest.js",
+    "test:e2e": "playwright test -c src/test/e2e/playwright.config.ts",
+    "test": "npm run test:unit && npm run test:visual && npm run test:integration && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.99",
+    "@playwright/test": "^1.59.1",
+    "@types/chai": "^5.2.3",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.11.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/sinon": "^21.0.1",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "^2.3.9",
+    "c8": "^11.0.0",
+    "chai": "^4.5.0",
+    "copy-webpack-plugin": "^14.0.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^8.57.0",
+    "glob": "^13.0.6",
+    "mocha": "^11.7.5",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
+    "sinon": "^21.1.2",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "bwip-js": "^4.10.1",
+    "pdf-lib": "^1.17.1"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "Label Skeleton": {
+    "prefix": ["label", "^XA"],
+    "body": [
+      "^XA",
+      "^CF0,${1:30}",
+      "^FO${2:50},${3:50}^FD${4:Hello, ZPL}^FS",
+      "^XZ"
+    ],
+    "description": "Start/end a ZPL label with a simple text field."
+  },
+  "Field Origin + Data": {
+    "prefix": "field",
+    "body": ["^FO${1:50},${2:50}^FD${3:text}^FS"],
+    "description": "Place a field at (x,y) with data."
+  },
+  "Code 128 Barcode": {
+    "prefix": "code128",
+    "body": [
+      "^BY${1:2},${2:3},${3:80}",
+      "^FO${4:50},${5:50}^BCN,${6:80},Y,N,N^FD${7:1234567890}^FS"
+    ],
+    "description": "Code 128 barcode."
+  },
+  "QR Code": {
+    "prefix": "qrcode",
+    "body": [
+      "^FO${1:50},${2:50}^BQN,${3:2},${4:6}^FDQA,${5:https://example.com}^FS"
+    ],
+    "description": "QR Code field."
+  },
+  "Data Matrix": {
+    "prefix": "datamatrix",
+    "body": ["^FO${1:50},${2:50}^BXN,${3:6},200^FD${4:DATA}^FS"],
+    "description": "Data Matrix barcode."
+  },
+  "Graphic Box": {
+    "prefix": "box",
+    "body": ["^FO${1:50},${2:50}^GB${3:200},${4:100},${5:2}^FS"],
+    "description": "Graphic box (width, height, thickness)."
+  },
+  "Horizontal Line": {
+    "prefix": "hline",
+    "body": ["^FO${1:50},${2:50}^GB${3:400},0,${4:2}^FS"],
+    "description": "Horizontal rule using ^GB."
+  },
+  "Text Block (wrap)": {
+    "prefix": "textblock",
+    "body": [
+      "^FO${1:50},${2:50}",
+      "^A0N,${3:25},${4:25}",
+      "^FB${5:400},${6:4},0,L,0",
+      "^FD${7:Long text that should wrap.}^FS"
+    ],
+    "description": "Word-wrapped text block."
+  },
+  "Font (Scalable)": {
+    "prefix": "font",
+    "body": ["^A${1|0,A,B,C,D,E,F,G,H|}${2|N,R,I,B|},${3:30},${4:30}"],
+    "description": "Set scalable font and size."
+  },
+  "Change Default Font": {
+    "prefix": "cf",
+    "body": ["^CF${1|0,A,B,C,D,E,F,G,H|},${2:30},${3:30}"],
+    "description": "Change default font."
+  },
+  "Print Quantity": {
+    "prefix": "pq",
+    "body": ["^PQ${1:1},${2:0},${3:0},N"],
+    "description": "Print quantity."
+  },
+  "Label Home": {
+    "prefix": "lh",
+    "body": ["^LH${1:0},${2:0}"],
+    "description": "Label home offset."
+  },
+  "Print Width": {
+    "prefix": "pw",
+    "body": ["^PW${1:812}"],
+    "description": "Print width in dots."
+  },
+  "Label Length": {
+    "prefix": "ll",
+    "body": ["^LL${1:1218}"],
+    "description": "Label length in dots."
+  },
+  "Comment": {
+    "prefix": "fx",
+    "body": ["^FX ${1:comment}^FS"],
+    "description": "ZPL comment."
+  },
+  "Reverse Print": {
+    "prefix": "fr",
+    "body": ["^FR"],
+    "description": "Reverse print next field."
+  },
+  "Shipping Label Template": {
+    "prefix": "shipping",
+    "body": [
+      "^XA",
+      "^CF0,40",
+      "^FO30,30^FDFROM:^FS",
+      "^CF0,28",
+      "^FO30,80^FD${1:Sender Name}^FS",
+      "^FO30,120^FD${2:Street}^FS",
+      "^FO30,160^FD${3:City, State ZIP}^FS",
+      "",
+      "^CF0,40",
+      "^FO30,240^FDTO:^FS",
+      "^CF0,32",
+      "^FO30,290^FD${4:Recipient Name}^FS",
+      "^FO30,330^FD${5:Street}^FS",
+      "^FO30,370^FD${6:City, State ZIP}^FS",
+      "",
+      "^FO30,440^GB750,0,3^FS",
+      "^FO30,470^BY3,3,120",
+      "^BCN,120,Y,N,N",
+      "^FD${7:1Z999AA10123456784}^FS",
+      "^XZ"
+    ],
+    "description": "Complete shipping label template."
+  }
+}

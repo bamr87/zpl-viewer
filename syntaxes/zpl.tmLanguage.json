@@ -1,0 +1,103 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ZPL",
+  "scopeName": "source.zpl",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#label-boundary" },
+    { "include": "#field-separator" },
+    { "include": "#field-data" },
+    { "include": "#barcode-commands" },
+    { "include": "#graphic-commands" },
+    { "include": "#font-commands" },
+    { "include": "#control-commands" },
+    { "include": "#command" },
+    { "include": "#number" },
+    { "include": "#string" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.zpl",
+      "match": "(\\^FX)([^^~]*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.comment.zpl" },
+        "2": { "name": "comment.line.zpl" }
+      }
+    },
+    "label-boundary": {
+      "patterns": [
+        {
+          "name": "keyword.control.label.start.zpl",
+          "match": "\\^XA\\b"
+        },
+        {
+          "name": "keyword.control.label.end.zpl",
+          "match": "\\^XZ\\b"
+        }
+      ]
+    },
+    "field-separator": {
+      "patterns": [
+        { "name": "keyword.control.field.start.zpl", "match": "\\^FO\\b" },
+        { "name": "keyword.control.field.typeset.zpl", "match": "\\^FT\\b" },
+        { "name": "keyword.control.field.end.zpl", "match": "\\^FS\\b" },
+        { "name": "keyword.control.field.reverse.zpl", "match": "\\^FR\\b" },
+        { "name": "keyword.control.field.hex.zpl", "match": "\\^FH\\b" }
+      ]
+    },
+    "field-data": {
+      "name": "meta.field-data.zpl",
+      "begin": "(\\^FD)",
+      "end": "(\\^FS|(?=\\^|~))",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.field.data.zpl" }
+      },
+      "endCaptures": {
+        "1": { "name": "keyword.control.field.end.zpl" }
+      },
+      "patterns": [
+        { "name": "string.unquoted.field.zpl", "match": "[^\\^~]+" }
+      ]
+    },
+    "barcode-commands": {
+      "name": "support.function.barcode.zpl",
+      "match": "\\^(BC|BQ|BX|B3|B7|B8|B9|BA|BB|BD|BE|BF|BI|BJ|BK|BL|BM|BN|BO|BP|BR|BS|BT|BU|BY|BZ|B2|B4|B5)\\b"
+    },
+    "graphic-commands": {
+      "name": "support.function.graphic.zpl",
+      "match": "\\^(GB|GC|GD|GE|GF|GS|IL|IS|IM|IME)\\b"
+    },
+    "font-commands": {
+      "name": "support.function.font.zpl",
+      "match": "\\^(A[0-9A-Z@]?|CF|CI|CW|CV|SE|TB)\\b"
+    },
+    "control-commands": {
+      "name": "keyword.other.control.zpl",
+      "match": "~(CC|CD|CT|DB|DE|DG|DN|DS|DT|DU|DY|EG|FR|HB|HD|HI|HM|HQ|HS|HU|IS|JA|JB|JC|JD|JE|JF|JG|JH|JI|JL|JM|JN|JO|JP|JR|JS|JT|JX|KB|NC|NR|NT|PH|PL|PP|PR|PS|RO|SD|TA|WC|ZN)\\b"
+    },
+    "command": {
+      "patterns": [
+        {
+          "name": "entity.name.function.caret.zpl",
+          "match": "\\^[A-Z][A-Z0-9@]{0,2}\\b"
+        },
+        {
+          "name": "entity.name.function.tilde.zpl",
+          "match": "~[A-Z][A-Z0-9@]{0,2}\\b"
+        }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric.zpl",
+      "match": "(?<=[,\\^])-?\\d+(\\.\\d+)?"
+    },
+    "string": {
+      "name": "string.quoted.double.zpl",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.zpl", "match": "\\\\." }
+      ]
+    }
+  }
+}

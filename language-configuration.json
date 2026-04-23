@@ -1,0 +1,37 @@
+{
+  "comments": {
+    "lineComment": "^FX"
+  },
+  "brackets": [
+    ["^XA", "^XZ"],
+    ["^FO", "^FS"],
+    ["^FB", "^FS"],
+    ["^GB", "^FS"],
+    ["^BY", "^FS"]
+  ],
+  "autoClosingPairs": [
+    { "open": "\"", "close": "\"" },
+    { "open": "'", "close": "'" }
+  ],
+  "surroundingPairs": [
+    ["\"", "\""],
+    ["'", "'"]
+  ],
+  "wordPattern": "(-?\\d+\\.?\\d*)|([\\^~][A-Z0-9]{1,3})|([A-Za-z_][A-Za-z0-9_]*)",
+  "onEnterRules": [
+    {
+      "beforeText": "^\\^XA\\s*$",
+      "action": { "indent": "indent" }
+    },
+    {
+      "beforeText": "^\\^XZ\\s*$",
+      "action": { "indent": "outdent" }
+    }
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\^XA",
+      "end": "^\\^XZ"
+    }
+  }
+}

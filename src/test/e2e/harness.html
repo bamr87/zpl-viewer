@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZPL Webview Harness</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    .toolbar { display: flex; gap: 8px; padding: 8px; }
+    canvas { border: 1px solid #ddd; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button data-cmd="prev">Prev</button>
+    <span id="page-indicator">0 / 0</span>
+    <button data-cmd="next">Next</button>
+    <button data-cmd="zoom-out">-</button>
+    <button data-cmd="zoom-reset">100%</button>
+    <button data-cmd="zoom-in">+</button>
+    <button data-cmd="refresh">Refresh</button>
+    <span id="status">booting</span>
+  </div>
+  <main>
+    <div id="boot">boot</div>
+    <canvas id="label" width="1" height="1"></canvas>
+  </main>
+
+  <script>
+    window.__hostMessages = [];
+    window.acquireVsCodeApi = function() {
+      return {
+        postMessage(msg) {
+          window.__hostMessages.push(msg);
+        },
+        setState() {},
+        getState() { return undefined; },
+      };
+    };
+  </script>
+  <script src="../../../dist/webview/preview.js"></script>
+</body>
+</html>
