@@ -1,0 +1,11 @@
+# Normalize line endings so checkouts are byte-identical on every OS.
+# Windows runners default to core.autocrlf=true, which converted the LF .zpl
+# fixtures to CRLF at checkout and broke EOL-sensitive tests (the formatter
+# integration test asserts LF output, and VS Code adopts the file's EOL).
+* text=auto
+
+# ZPL fixtures/samples are EOL-sensitive test inputs: always LF, everywhere.
+*.zpl text eol=lf
+
+# Golden images and other binaries must never be touched by EOL conversion.
+*.png binary
