@@ -117,7 +117,7 @@ The test suite is layered so failures isolate quickly:
 
 ### Golden image workflow
 
-- Golden files live in `src/test/renderer/visual/golden/`.
+- Golden files live in `src/test/renderer/visual/golden/<platform>/` (one set per `process.platform` — `linux`, `darwin`, … — because system-font text rendering differs between OSes). A missing golden for your platform is generated on first run.
 - When rendering behavior changes intentionally:
 
 ```bash
