@@ -8,6 +8,13 @@ on:
   push:
     branches: [main]
 
+# Serialize release-please: back-to-back merges to main (e.g. two dependabot
+# merges seconds apart) otherwise race each other updating the release PR.
+# Queue, never cancel — every main push must still be observed by release-please.
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
