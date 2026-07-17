@@ -36,6 +36,10 @@ export function assertFixtureMatchesGolden(
     'fixtures',
     'valid',
   );
+  // Goldens are per-platform: text rendering (system fonts, anti-aliasing)
+  // differs between OSes, so a golden generated on one platform never matches
+  // pixels rendered on another. Each platform keeps its own set under
+  // golden/<process.platform>/; a missing golden is generated on first run.
   const goldenPath = path.join(
     process.cwd(),
     'src',
@@ -43,6 +47,7 @@ export function assertFixtureMatchesGolden(
     'renderer',
     'visual',
     'golden',
+    process.platform,
     goldenName,
   );
   const actualPath = path.join(
