@@ -52,6 +52,32 @@ describe('epl.tokenizer', () => {
     expect(eplTokenAt(tokens, source.indexOf('P1'))?.name).to.equal('P');
   });
 
+  it('keeps offsets correct with CRLF line endings', () => {
+    // A file written on Windows terminates lines with two characters; every
+    // token offset has to stay anchored to the source regardless.
+    const source = 'N\r\nq812\r\nA20,20,0,4,1,1,N,"X"\r\nP1\r\n';
+    const tokens = tokenizeEpl(source);
+    expect(tokens.map((token) => token.name)).to.deep.equal(['N', 'q', 'A', 'P']);
+    for (const token of tokens) {
+      expect(
+        source.slice(token.start, token.start + token.name.length),
+        `token ${token.name} start offset`,
+      ).to.equal(token.name);
+    }
+    const text = tokens[2];
+    expect(text.start).to.equal(source.indexOf('A20,20'));
+    expect(text.line).to.equal(2);
+    expect(text.data).to.equal('X');
+    // The carriage return must not leak into the parameter list either.
+    expect(text.args[6]).to.equal('N');
+  });
+
+  it('handles a final line with no terminator', () => {
+    const tokens = tokenizeEpl('N\nP1');
+    expect(tokens.map((token) => token.name)).to.deep.equal(['N', 'P']);
+    expect(tokens[1].start).to.equal(2);
+  });
+
   it('handles escaped quotes inside data', () => {
     const tokens = tokenizeEpl('A1,1,0,3,1,1,N,"say \\"hi\\""');
     expect(tokens[0].data).to.equal('say "hi"');

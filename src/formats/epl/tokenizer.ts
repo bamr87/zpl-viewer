@@ -110,43 +110,67 @@ function splitArgs(raw: string): { args: string[]; data?: string } {
   return { args, data };
 }
 
+/** Parses one line into a token, or nothing when it is blank or a comment. */
+function tokenizeLine(
+  line: string,
+  lineIndex: number,
+  lineStart: number,
+): EplToken | undefined {
+  const leading = line.match(/^\s*/)?.[0].length ?? 0;
+  const body = line.slice(leading);
+  if (body.length === 0 || body.startsWith(';')) {
+    return undefined; // blank line or comment
+  }
+
+  let name = '';
+  const two = body.slice(0, 2);
+  if (/^[A-Za-z]{2}$/.test(two) && TWO_LETTER.has(two.toUpperCase())) {
+    name = two.toUpperCase();
+  } else if (/^[A-Za-z?]/.test(body)) {
+    name = body[0];
+  } else {
+    return undefined; // not a command line
+  }
+
+  const raw = body.slice(name.length).replace(/\s+$/, '');
+  const { args, data } = splitArgs(raw);
+  return {
+    name,
+    raw,
+    args,
+    data,
+    line: lineIndex,
+    start: lineStart + leading,
+    end: lineStart + line.length,
+  };
+}
+
 export function tokenizeEpl(source: string): EplToken[] {
   const tokens: EplToken[] = [];
-  const lines = source.split(/\r?\n/);
-  let offset = 0;
+  let lineStart = 0;
+  let lineIndex = 0;
 
-  lines.forEach((line, index) => {
-    const lineStart = offset;
-    offset += line.length + 1;
+  while (lineStart <= source.length) {
+    const newline = source.indexOf('\n', lineStart);
+    const lineEnd = newline < 0 ? source.length : newline;
+    const raw = source.slice(lineStart, lineEnd);
+    // A CRLF terminator is two characters, so offsets have to come from the
+    // source itself: deriving them from the line's own length drifts by one
+    // per preceding line, which lands diagnostics and hovers on the wrong
+    // characters in any file written on Windows.
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
 
-    const leading = line.match(/^\s*/)?.[0].length ?? 0;
-    const body = line.slice(leading);
-    if (body.length === 0 || body.startsWith(';')) {
-      return; // blank line or comment
+    const token = tokenizeLine(line, lineIndex, lineStart);
+    if (token) {
+      tokens.push(token);
     }
 
-    let name = '';
-    const two = body.slice(0, 2);
-    if (/^[A-Za-z]{2}$/.test(two) && TWO_LETTER.has(two.toUpperCase())) {
-      name = two.toUpperCase();
-    } else if (/^[A-Za-z?]/.test(body)) {
-      name = body[0];
-    } else {
-      return; // not a command line
+    lineIndex += 1;
+    if (newline < 0) {
+      break;
     }
-
-    const raw = body.slice(name.length).replace(/\s+$/, '');
-    const { args, data } = splitArgs(raw);
-    tokens.push({
-      name,
-      raw,
-      args,
-      data,
-      line: index,
-      start: lineStart + leading,
-      end: lineStart + line.length,
-    });
-  });
+    lineStart = newline + 1;
+  }
 
   return tokens;
 }
