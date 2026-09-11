@@ -40,6 +40,12 @@ export type Op =
   | BarcodeOp
   | ImageOp;
 
+/** Character range in the source document that produced an op. */
+export interface SourceSpan {
+  start: number;
+  end: number;
+}
+
 interface BaseOp {
   x: number;
   y: number;
@@ -47,6 +53,12 @@ interface BaseOp {
   rotation: Rotation;
   /** If true, render in white on black background (^FR). */
   reverse: boolean;
+  /**
+   * Where this op came from in the source text. Set by the interpreters and
+   * used to attach analysis findings to editor ranges; optional so
+   * synthesized ops (templates, conversions) do not have to fake one.
+   */
+  source?: SourceSpan;
 }
 
 export interface TextOp extends BaseOp {
@@ -111,19 +123,33 @@ export interface EllipseOp extends BaseOp {
 }
 
 export type BarcodeSymbology =
+  // Linear
   | 'code128'
+  | 'gs1-128'
   | 'code39'
+  | 'code93'
+  | 'code11'
+  | 'codabar'
+  | 'interleaved2of5'
+  | 'industrial2of5'
+  | 'itf14'
+  | 'msi'
+  | 'plessey'
   | 'ean13'
   | 'ean8'
   | 'upca'
   | 'upce'
-  | 'itf14'
+  | 'gs1databar'
+  // Postal
+  | 'postnet'
+  | 'planet'
+  // 2-D
   | 'qrcode'
   | 'datamatrix'
   | 'pdf417'
+  | 'micropdf417'
   | 'aztec'
-  | 'codabar'
-  | 'code93';
+  | 'maxicode';
 
 export interface BarcodeOp extends BaseOp {
   type: 'barcode';

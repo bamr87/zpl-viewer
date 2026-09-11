@@ -6,6 +6,7 @@
  */
 
 import { tokenize, ZplToken } from '../zplParser';
+import { symbologyForZplCommand } from '../barcode/symbologies';
 import {
   BarcodeOp,
   BoxOp,
@@ -87,12 +88,16 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
     };
   };
 
-  const finishField = (): void => {
+  const finishField = (endToken?: ZplToken): void => {
     if (!currentPage || !state.field) {
       return;
     }
     const f = state.field;
     const rotation = f.rotation;
+    const source = {
+      start: f.startToken.start,
+      end: endToken?.end ?? f.startToken.end,
+    };
 
     if (f.image) {
       currentPage.ops.push({
@@ -101,6 +106,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         y: f.y,
         rotation,
         reverse: f.reverse,
+        source,
       });
       state.field = undefined;
       return;
@@ -124,6 +130,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         y: f.y,
         rotation,
         reverse: f.reverse,
+        source,
       };
       currentPage.ops.push(bc);
       state.field = undefined;
@@ -148,6 +155,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         rotation,
         reverse: f.reverse,
         block: f.block,
+        source,
       };
       currentPage.ops.push(op);
       state.field = undefined;
@@ -233,7 +241,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         break;
       }
       case '^FS':
-        finishField();
+        finishField(token);
         break;
       case '^CF': {
         state.defaultFont = (token.args[0] ?? '0').toUpperCase() || '0';
@@ -245,18 +253,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         state.barModuleWidth = intArg(token, 0, state.barModuleWidth);
         state.barRatio = floatArg(token, 1, state.barRatio);
         state.barHeight = intArg(token, 2, state.barHeight);
-        break;
-      }
-      case '^BC': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'code128',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-          interpretationAbove: boolArg(token, 3, false),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
         break;
       }
       case '^BQ': {
@@ -282,51 +278,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         applyBarcodeRotation(state.field!, token, 0);
         break;
       }
-      case '^B3': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'code39',
-          ...state.field!.barcode,
-          height: intArg(token, 2, state.barHeight),
-          interpretation: boolArg(token, 3, true),
-          interpretationAbove: boolArg(token, 4, false),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^BE': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'ean13',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^BU': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'upca',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^B8': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'ean8',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
       case '^B7': {
         ensureField(state, token);
         state.field!.barcode = {
@@ -340,17 +291,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         applyBarcodeRotation(state.field!, token, 0);
         break;
       }
-      case '^B9': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'codabar',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
       case '^GB': {
         ensureField(state, token);
         const w = intArg(token, 0, 1);
@@ -358,7 +298,10 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         const thickness = intArg(token, 2, 1);
         const color = colorArg(token, 3, 'B');
         const rounding = intArg(token, 4, 0);
-        currentPage?.ops.push(boxOrLine(state.field!, w, h, thickness, color, rounding));
+        currentPage?.ops.push({
+          ...boxOrLine(state.field!, w, h, thickness, color, rounding),
+          source: { start: state.field!.startToken.start, end: token.end },
+        });
         // ^GB consumes the field without waiting for ^FD, so close it now.
         state.field = undefined;
         break;
@@ -374,6 +317,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -392,6 +336,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -409,6 +354,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -425,6 +371,12 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         break;
       }
       default: {
+        const layout = ZPL_BARCODE_LAYOUTS[token.command];
+        if (layout) {
+          ensureField(state, token);
+          applyBarcodeLayout(state, token, layout);
+          break;
+        }
         // ^A commands (font selection) have the format ^A[font][rotation],[h],[w]
         // where [font] and [rotation] are single letters embedded in the token name.
         if (token.command.startsWith('^A') && token.command.length >= 2) {
@@ -523,6 +475,87 @@ function boxOrLine(
     rotation: field.rotation,
     reverse: field.reverse,
   };
+}
+
+/**
+ * Argument layout of every linear/postal ZPL barcode command. ZPL puts the
+ * same conceptual parameter at a different index per command, so the index of
+ * each one is declared here rather than repeated in a dozen switch arms. The
+ * symbology itself comes from the shared barcode catalog, which also drives
+ * validation, emission and the bwip-js renderer.
+ *
+ * `^BQ` (QR), `^BX` (Data Matrix) and `^B7` (PDF417) keep dedicated handling
+ * above: their parameters are 2-D specific rather than height/interpretation.
+ */
+interface ZplBarcodeLayout {
+  command: string;
+  height?: number;
+  interpretation?: number;
+  interpretationAbove?: number;
+  magnification?: number;
+}
+
+const ZPL_BARCODE_LAYOUTS: Record<string, ZplBarcodeLayout> = {
+  // orientation, height, interpretation line, line above
+  '^BC': { command: '^BC', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BA': { command: '^BA', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B2': { command: '^B2', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BI': { command: '^BI', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BJ': { command: '^BJ', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BE': { command: '^BE', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B8': { command: '^B8', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BU': { command: '^BU', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B9': { command: '^B9', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BZ': { command: '^BZ', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B5': { command: '^B5', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BF': { command: '^BF', height: 1 },
+  // orientation, check digit, height, interpretation line, line above
+  '^B3': { command: '^B3', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^B1': { command: '^B1', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BK': { command: '^BK', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BM': { command: '^BM', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BP': { command: '^BP', height: 2, interpretation: 3, interpretationAbove: 4 },
+  // orientation, symbology type, magnification, separator height, height
+  '^BR': { command: '^BR', magnification: 2, height: 4 },
+  // orientation, magnification
+  '^BO': { command: '^BO', magnification: 1 },
+  // mode, symbol number, total symbols - no orientation argument
+  '^BD': { command: '^BD' },
+};
+
+function applyBarcodeLayout(
+  state: State,
+  token: ZplToken,
+  layout: ZplBarcodeLayout,
+): void {
+  const field = state.field;
+  if (!field) {
+    return;
+  }
+  const spec = symbologyForZplCommand(layout.command);
+  field.barcode = {
+    symbology: spec?.id ?? 'code128',
+    ...field.barcode,
+    height:
+      layout.height === undefined
+        ? state.barHeight
+        : intArg(token, layout.height, state.barHeight),
+    interpretation:
+      layout.interpretation === undefined
+        ? false
+        : boolArg(token, layout.interpretation, true),
+    interpretationAbove:
+      layout.interpretationAbove === undefined
+        ? false
+        : boolArg(token, layout.interpretationAbove, false),
+    magnification:
+      layout.magnification === undefined
+        ? undefined
+        : intArg(token, layout.magnification, 2),
+  };
+  if (layout.command !== '^BD') {
+    applyBarcodeRotation(field, token, 0);
+  }
 }
 
 function applyBarcodeRotation(

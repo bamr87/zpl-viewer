@@ -1,24 +1,22 @@
 import * as vscode from 'vscode';
-import { formatZpl } from '../formatting';
+import { formatLabel } from '../core/pipeline';
+import { formatOfDocument, getFormatConfig } from '../config';
 
 /**
- * Formats a ZPL document:
- *   - Optionally uppercases command names.
- *   - Optionally places each command on its own line.
- *   - Indents everything between `^XA` and `^XZ` by two spaces.
+ * Formats a label document with its own language's rules:
+ *   - ZPL: optional uppercasing, one command per line, indented label bodies.
+ *   - EPL: layout only — command case is significant in EPL2.
  */
-export class ZplFormatter
-  implements vscode.DocumentFormattingEditProvider
-{
+export class LabelFormatter implements vscode.DocumentFormattingEditProvider {
   provideDocumentFormattingEdits(
     document: vscode.TextDocument,
   ): vscode.ProviderResult<vscode.TextEdit[]> {
-    const config = vscode.workspace.getConfiguration('zplViewer.format');
-    const uppercase = config.get<boolean>('uppercaseCommands', true);
-    const oneCommandPerLine = config.get<boolean>('oneCommandPerLine', true);
-
+    const config = getFormatConfig();
     const original = document.getText();
-    const formatted = formatZpl(original, { uppercase, oneCommandPerLine });
+    const formatted = formatLabel(original, formatOfDocument(document), {
+      uppercaseCommands: config.uppercaseCommands,
+      oneCommandPerLine: config.oneCommandPerLine,
+    });
     if (formatted === original) {
       return [];
     }

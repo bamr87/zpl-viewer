@@ -12,5 +12,16 @@
       "bwip-js": ["node_modules/bwip-js/dist/bwip-js.d.ts"]
     }
   },
-  "include": ["src/webview/**/*", "src/renderer/**/*", "src/zplParser.ts"]
+  "include": [
+    "src/webview/**/*",
+    "src/renderer/**/*",
+    "src/core/**/*",
+    "src/barcode/**/*",
+    "src/formats/**/*",
+    "src/data/**/*",
+    "src/emit/**/*",
+    "src/analysis/**/*",
+    "src/zplParser.ts",
+    "src/formatting.ts"
+  ]
 }

@@ -1,0 +1,5 @@
+sku,name,price,aisle,bin,url
+WD-001-RED,Widget Deluxe Red,$19.99,A,7,https://example.com/p/WD-001-RED
+WD-001-BLU,Widget Deluxe Blue,$19.99,A,8,https://example.com/p/WD-001-BLU
+GZ-220,Gizmo Standard,$7.50,B,12,https://example.com/p/GZ-220
+"SPR-9,000","Sprocket, heavy duty",$149.00,C,3,https://example.com/p/SPR-9000

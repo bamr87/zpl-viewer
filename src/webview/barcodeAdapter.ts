@@ -1,71 +1,53 @@
 /**
- * Adapter that renders ZPL barcodes via bwip-js onto an offscreen canvas. The
- * resulting canvas is later composited into the main label canvas by draw.ts.
+ * Adapter that renders IR barcode ops via bwip-js onto an offscreen canvas.
+ * The resulting canvas is later composited into the main label canvas by
+ * draw.ts.
  *
- * bwip-js is included as a CDN-less dependency; we import the browser bundle.
+ * Encoder ids and 2-D/linear classification come from the shared symbology
+ * catalog, so adding a symbology in one place lights it up in the parser,
+ * validator, emitters and this renderer at once.
  */
 
 import bwipjs from 'bwip-js';
-import { BarcodeOp, BarcodeSymbology } from '../renderer/ir';
+import { BarcodeOp } from '../renderer/ir';
 import { BarcodeRenderer } from '../renderer/draw';
-
-const BWIPP_MAP: Record<BarcodeSymbology, string> = {
-  code128: 'code128',
-  code39: 'code39',
-  ean13: 'ean13',
-  ean8: 'ean8',
-  upca: 'upca',
-  upce: 'upce',
-  itf14: 'itf14',
-  qrcode: 'qrcode',
-  datamatrix: 'datamatrix',
-  pdf417: 'pdf417',
-  aztec: 'azteccode',
-  codabar: 'rationalizedCodabar',
-  code93: 'code93',
-};
-
-const TWO_D_CODES = new Set<BarcodeSymbology>([
-  'qrcode',
-  'datamatrix',
-  'pdf417',
-  'aztec',
-]);
+import { findSymbology } from '../barcode/symbologies';
+import { completeBarcodeData } from '../barcode/validate';
 
 export class BwipBarcodeRenderer implements BarcodeRenderer {
   render(op: BarcodeOp): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
-    const bcid = BWIPP_MAP[op.symbology];
-    if (!bcid) {
+    const spec = findSymbology(op.symbology);
+    if (!spec) {
       throw new Error(`Unsupported barcode symbology: ${op.symbology}`);
     }
 
     const options: Record<string, unknown> = {
-      bcid,
-      text: op.data,
+      bcid: spec.bwipId,
+      text: completeBarcodeData(spec.id, op.data),
       includetext: op.interpretation,
       textxalign: 'center',
       backgroundcolor: 'FFFFFF',
       barcolor: '000000',
     };
 
-    if (TWO_D_CODES.has(op.symbology)) {
+    if (spec.kind === '2d') {
       const scale = Math.max(1, op.magnification ?? 4);
       options.scale = scale;
       if (op.errorCorrection) {
-        if (op.symbology === 'qrcode') {
+        if (spec.id === 'qrcode') {
           options.eclevel = op.errorCorrection;
-        } else if (op.symbology === 'pdf417') {
+        } else if (spec.id === 'pdf417' || spec.id === 'micropdf417') {
           const n = parseInt(op.errorCorrection, 10);
           if (Number.isFinite(n)) {
             options.eclevel = n;
           }
         }
       }
-      if (op.columns && op.symbology === 'datamatrix') {
+      if (op.columns && spec.id === 'datamatrix') {
         options.columns = op.columns;
       }
-      if (op.rows && op.symbology === 'datamatrix') {
+      if (op.rows && spec.id === 'datamatrix') {
         options.rows = op.rows;
       }
     } else {

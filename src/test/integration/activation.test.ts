@@ -12,7 +12,16 @@ describe('integration: activation', () => {
     }
 
     const commands = await vscode.commands.getCommands(true);
+    // Both namespaces: the current `labelStudio.*` ids and the `zplViewer.*`
+    // aliases kept for existing keybindings and tasks.
     for (const cmd of [
+      'labelStudio.preview',
+      'labelStudio.previewToSide',
+      'labelStudio.exportPng',
+      'labelStudio.exportPdf',
+      'labelStudio.formatDocument',
+      'labelStudio.validate',
+      'labelStudio.insertTemplate',
       'zplViewer.preview',
       'zplViewer.previewToSide',
       'zplViewer.exportPng',

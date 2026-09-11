@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "EPL2",
+  "scopeName": "source.epl",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#label-boundary" },
+    { "include": "#barcode" },
+    { "include": "#text-field" },
+    { "include": "#graphic" },
+    { "include": "#setup" },
+    { "include": "#command" },
+    { "include": "#string" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "^\\s*;.*$",
+      "name": "comment.line.semicolon.epl"
+    },
+    "label-boundary": {
+      "match": "^\\s*(N|P\\d*)(,\\d+)?\\s*$",
+      "captures": {
+        "1": { "name": "keyword.control.label.epl" }
+      }
+    },
+    "text-field": {
+      "begin": "^\\s*(A)(?=\\d)",
+      "beginCaptures": {
+        "1": { "name": "keyword.other.field.epl" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" }
+      ]
+    },
+    "barcode": {
+      "begin": "^\\s*([Bb])(?=\\d)",
+      "beginCaptures": {
+        "1": { "name": "support.function.barcode.epl" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" }
+      ]
+    },
+    "graphic": {
+      "begin": "^\\s*(X|LO|LE|LW|LS|GW|GG|GK|GM)(?=[\\d\\s])",
+      "beginCaptures": {
+        "1": { "name": "support.class.graphic.epl" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" }
+      ]
+    },
+    "setup": {
+      "begin": "^\\s*(q|Q|R|S|D|Z[TB]|J[FB]|O[DHR]|I|f|U[NP]|F[KSRE]|E[IK]|TD|TS)(?=[\\d,\\s]|$)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.setup.epl" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" }
+      ]
+    },
+    "command": {
+      "match": "^\\s*([A-Za-z?]{1,2})",
+      "captures": {
+        "1": { "name": "keyword.other.command.epl" }
+      }
+    },
+    "string": {
+      "name": "string.quoted.double.epl",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.epl"
+        }
+      ]
+    },
+    "number": {
+      "match": "\\b\\d+\\b",
+      "name": "constant.numeric.epl"
+    }
+  }
+}

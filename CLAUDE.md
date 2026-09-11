@@ -2,11 +2,13 @@
 
 Guidance for AI coding agents (Claude Code, Copilot, Cursor) working in **zpl-viewer**.
 
-**zpl-viewer** is a VS Code extension ("ZPL Viewer") that gives developers full language support for Zebra Programming Language (ZPL/ZPL II) label files (`.zpl`, `.zpl2`, `.prn`, `.lbl`): syntax highlighting, hover docs + IntelliSense for 50+ commands, snippets, a formatter, diagnostics, a live label preview in a webview, and PNG/PDF export. Everything runs fully offline and in-process — `src/renderer/parser.ts` turns ZPL into a drawing-op IR and `src/renderer/draw.ts` renders it to Canvas 2D, with pure-JS libraries (`bwip-js` for barcodes, `pdf-lib` for PDF export); no HTTP calls, external services, or binaries. "Done" here means ESLint is clean, both webpack bundles (`dist/extension.js`, `dist/webview/`) build, and the four-layer test pipeline is green — unit, visual regression against committed golden PNGs, VS Code extension-host integration, and Playwright e2e — as run by the 3-OS CI matrix (`.github/workflows/ci.yml`, Node 20).
+**Label Studio** (package name `zpl-viewer`, kept for extension-identity stability) is a VS Code extension for everything that happens to a thermal label before it reaches the printer: read, create, modify, analyze, import, merge and deploy. It supports two printer languages — ZPL II (`.zpl`, `.zpl2`, `.prn`, `.lbl`) and EPL2 (`.epl`, `.epl2`) — with syntax highlighting, hover docs and IntelliSense, snippets, formatters, diagnostics, a live label preview, PNG/PDF export, a 24-symbology barcode studio, CSV/JSON data merge, PNG and printer-capture import, and deployment over raw TCP 9100, a device path or a spool folder.
+
+Everything except deployment runs fully offline and in-process: each language parses into the shared drawing-op IR (`src/renderer/ir.ts`), `src/renderer/draw.ts` renders it to Canvas 2D, and pure-JS libraries (`bwip-js` for barcodes, `pdf-lib` for PDF) do the rest. The only socket in the codebase is `src/deploy/transports.ts`, used when a user explicitly deploys. "Done" here means ESLint is clean, both webpack bundles (`dist/extension.js`, `dist/webview/`) build, and the four-layer test pipeline is green — unit, visual regression against committed golden PNGs, VS Code extension-host integration, and Playwright e2e — as run by the 3-OS CI matrix (`.github/workflows/ci.yml`, Node 20).
 
 ## Stack & commands
 
-TypeScript + webpack (two bundles: extension host + webview); tests are mocha/chai + c8, `@vscode/test-electron`, and Playwright.
+TypeScript + webpack (two configs: extension host, and a webview config with `preview` + `studio` entries); tests are mocha/chai + c8, `@vscode/test-electron`, and Playwright.
 
 ```bash
 npm ci                       # install dependencies (Node 20)
@@ -20,14 +22,23 @@ npm run test:e2e             # Playwright webview tests (first: npx playwright i
 npm test                     # full pipeline: unit + visual + integration + e2e
 ```
 
+## Architecture rules
+
+- `src/README.md` is the module guide — read it before adding code.
+- **Pure layer** (`core/`, `formats/`, `renderer/`, `barcode/`, `data/`, `emit/`, `analysis/`) must not import `vscode`, `fs`, `net` or `zlib`: it is compiled into the webview bundle and exercised directly by unit tests. Anything it needs goes in `tsconfig.webview.json`.
+- **Node-only** code lives in `importers/` and `deploy/`; **VS Code** code in `extension.ts`, `config.ts`, `diagnostics.ts`, `previewPanel.ts`, `providers/` and `ui/`. Commands stay thin — logic belongs below them, where it can be unit-tested.
+- Add a printer language by creating `src/formats/<id>/` and registering it in `src/core/formats.ts`; parse into the existing IR rather than inventing a second one.
+- `src/barcode/symbologies.ts` is the single source of truth for symbologies (encoder id, ZPL command, EPL selector, charset, length, check digit). Never hard-code a symbology mapping elsewhere.
+- Settings are read through `src/config.ts` so the legacy `zplViewer.*` keys keep working; new commands use the `labelStudio.*` namespace and keep an alias if they replace an old id.
+- Visual goldens are per-platform because system fonts differ; a text-free fixture (see `epl-geometry.epl`) is the way to get a portable golden.
+
 ## Conventions
 
 - Conventional Commits: `type(scope): description` (`feat`/`fix`/`docs`/`refactor`/`test`/`chore`/`ci`).
 - Default branch is `main` — branch from it and open a PR; never push to it directly.
-- README-First, README-Last: read the nearest `README.md` before changing a
-  directory, and update it after.
-- Don't suppress type errors (`as any`, `@ts-ignore`, `# type: ignore`) or
-  leave empty exception handlers.
+- README-First, README-Last: read the nearest `README.md` before changing a directory, and update it after.
+- Markdown is one paragraph per line (`python3 tools/unwrap-prose.py --write`); CI enforces it.
+- Don't suppress type errors (`as any`, `@ts-ignore`, `# type: ignore`) or leave empty exception handlers.
 
 ## Fleet context
 

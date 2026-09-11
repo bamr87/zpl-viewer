@@ -8,3 +8,6 @@ dist/
 coverage/
 test-results/
 playwright-report/
+
+# Written by the integration suite when it exercises workspace settings.
+src/test/fixtures/.vscode/

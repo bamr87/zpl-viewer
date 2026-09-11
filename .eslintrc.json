@@ -7,7 +7,38 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
-    "@typescript-eslint/naming-convention": "warn",
+    // Mirrors the rule's default configuration, plus two exemptions: object and
+    // type keys that have to be quoted are external identifiers (printer
+    // command names like `^BC`, VS Code command ids, file-dialog labels), and
+    // `__test` style exports are the repo's convention for test-only surfaces.
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "default",
+        "format": ["camelCase"],
+        "leadingUnderscore": "allowDouble",
+        "trailingUnderscore": "allow"
+      },
+      {
+        "selector": "import",
+        "format": ["camelCase", "PascalCase"]
+      },
+      {
+        "selector": "variable",
+        "format": ["camelCase", "UPPER_CASE"],
+        "leadingUnderscore": "allowDouble",
+        "trailingUnderscore": "allow"
+      },
+      {
+        "selector": "typeLike",
+        "format": ["PascalCase"]
+      },
+      {
+        "selector": ["objectLiteralProperty", "typeProperty"],
+        "format": null,
+        "modifiers": ["requiresQuotes"]
+      }
+    ],
     "@typescript-eslint/semi": "warn",
     "curly": "warn",
     "eqeqeq": "warn",

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src {{cspSource}} data: blob:; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}' 'unsafe-eval'; font-src {{cspSource}} data:;"
+    />
+    <title>Barcode Studio</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        font-family: var(--vscode-font-family);
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+        font-size: 13px;
+      }
+      .layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px;
+        align-items: flex-start;
+      }
+      .panel {
+        flex: 1 1 320px;
+        min-width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      label { display: block; font-size: 11px; opacity: 0.8; margin-bottom: 3px; }
+      select, input, textarea {
+        width: 100%;
+        box-sizing: border-box;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border, transparent);
+        padding: 5px 6px;
+        border-radius: 2px;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      textarea { font-family: var(--vscode-editor-font-family, monospace); resize: vertical; }
+      .row { display: flex; gap: 8px; }
+      .row > div { flex: 1; }
+      button {
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        padding: 6px 12px;
+        border-radius: 2px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      button.secondary {
+        background: var(--vscode-button-secondaryBackground, transparent);
+        color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+        border: 1px solid var(--vscode-panel-border);
+      }
+      button:hover { background: var(--vscode-button-hoverBackground); }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      .preview {
+        background: #ffffff;
+        padding: 12px;
+        border-radius: 3px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 140px;
+        overflow: auto;
+      }
+      canvas { image-rendering: pixelated; max-width: 100%; }
+      .issues { display: flex; flex-direction: column; gap: 4px; }
+      .issue { padding: 6px 8px; border-radius: 2px; font-size: 12px; }
+      .issue.error { background: var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.12)); }
+      .issue.warning { background: var(--vscode-inputValidation-warningBackground, rgba(255,180,0,0.12)); }
+      .issue.info { background: var(--vscode-textBlockQuote-background, rgba(128,128,128,0.12)); }
+      .ok { opacity: 0.7; font-size: 12px; }
+      pre.snippet {
+        background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.1));
+        padding: 10px;
+        border-radius: 3px;
+        overflow-x: auto;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 12px;
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .doc { font-size: 12px; opacity: 0.85; line-height: 1.5; }
+      h2 { font-size: 13px; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="panel">
+        <h2>Symbology</h2>
+        <div>
+          <label for="symbology">Barcode type</label>
+          <select id="symbology"></select>
+        </div>
+        <div>
+          <label for="data">Data</label>
+          <textarea id="data" rows="3"></textarea>
+        </div>
+        <div class="row">
+          <div>
+            <label for="moduleWidth">Narrow bar / module (dots)</label>
+            <input id="moduleWidth" type="number" min="1" max="10" value="2" />
+          </div>
+          <div>
+            <label for="height">Bar height (dots)</label>
+            <input id="height" type="number" min="1" max="600" value="80" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="magnification">2-D magnification</label>
+            <input id="magnification" type="number" min="1" max="10" value="5" />
+          </div>
+          <div>
+            <label for="ecc">Error correction</label>
+            <select id="ecc">
+              <option value="L">L - 7%</option>
+              <option value="M">M - 15%</option>
+              <option value="Q" selected>Q - 25%</option>
+              <option value="H">H - 30%</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="hri">Human-readable text</label>
+            <select id="hri">
+              <option value="yes" selected>Show</option>
+              <option value="no">Hide</option>
+            </select>
+          </div>
+          <div>
+            <label for="target">Insert as</label>
+            <select id="target">
+              <option value="zpl">ZPL</option>
+              <option value="epl">EPL2</option>
+            </select>
+          </div>
+        </div>
+        <div class="doc" id="doc"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Preview</h2>
+        <div class="preview"><canvas id="barcode" width="1" height="1"></canvas></div>
+        <div class="issues" id="issues"></div>
+        <h2>Snippet</h2>
+        <pre class="snippet" id="snippet">—</pre>
+        <div class="actions">
+          <button id="insert">Insert into label</button>
+          <button id="copy" class="secondary">Copy snippet</button>
+          <button id="export" class="secondary">Export PNG</button>
+        </div>
+      </div>
+    </div>
+    <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+  </body>
+</html>

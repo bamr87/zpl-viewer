@@ -1,0 +1,71 @@
+{
+  "EPL label skeleton": {
+    "prefix": "label",
+    "body": [
+      "N",
+      "q${1:812}",
+      "Q${2:406},24",
+      "$0",
+      "P1"
+    ],
+    "description": "Clear the buffer, set stock size, print one label."
+  },
+  "EPL text field": {
+    "prefix": "text",
+    "body": [
+      "A${1:50},${2:50},${3|0,1,2,3|},${4|1,2,3,4,5|},${5:1},${6:1},${7|N,R|},\"${8:TEXT}\""
+    ],
+    "description": "A: x, y, rotation, font, h-multiplier, v-multiplier, reverse, data."
+  },
+  "EPL barcode": {
+    "prefix": "barcode",
+    "body": [
+      "B${1:50},${2:100},${3|0,1,2,3|},${4|3,0,1,8,9,K,J,UA0,UE0|},${5:2},${6:6},${7:100},${8|B,N|},\"${9:12345678}\""
+    ],
+    "description": "B: x, y, rotation, type, narrow, wide, height, human-readable, data."
+  },
+  "EPL QR code": {
+    "prefix": "qr",
+    "body": [
+      "b${1:50},${2:50},Q,m2,s${3:6},\"${4:https://example.com}\""
+    ],
+    "description": "b: 2-D barcode, QR model 2."
+  },
+  "EPL Data Matrix": {
+    "prefix": "datamatrix",
+    "body": [
+      "b${1:50},${2:50},D,s${3:6},\"${4:PN:4711}\""
+    ],
+    "description": "b: 2-D barcode, Data Matrix."
+  },
+  "EPL box": {
+    "prefix": "box",
+    "body": [
+      "X${1:20},${2:20},${3:2},${4:400},${5:200}"
+    ],
+    "description": "X: x, y, line thickness, bottom-right x, bottom-right y."
+  },
+  "EPL line": {
+    "prefix": "line",
+    "body": [
+      "LO${1:20},${2:180},${3:760},${4:3}"
+    ],
+    "description": "LO: black line — x, y, horizontal length, vertical length."
+  },
+  "EPL shipping label": {
+    "prefix": "shipping",
+    "body": [
+      "N",
+      "q812",
+      "Q1218,24",
+      "A30,30,0,4,1,1,N,\"SHIP TO\"",
+      "A30,90,0,4,1,1,N,\"${1:Jane Doe}\"",
+      "A30,140,0,3,1,1,N,\"${2:456 Oak Avenue}\"",
+      "A30,180,0,3,1,1,N,\"${3:Lincoln, NE 68502}\"",
+      "LO30,240,750,3",
+      "B40,280,0,3,3,9,140,B,\"${4:1Z999AA10123456784}\"",
+      "P1"
+    ],
+    "description": "4x6 shipping label with address block and tracking barcode."
+  }
+}

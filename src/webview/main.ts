@@ -1,13 +1,14 @@
 /**
- * Preview webview entry. Receives ZPL source + render options from the
- * extension host, parses it locally, draws the result on a canvas, and
- * optionally exports PNG or PDF bytes back to the host.
+ * Preview webview entry. Receives label source (ZPL or EPL) + render options
+ * from the extension host, parses it locally, draws the result on a canvas,
+ * and optionally exports PNG or PDF bytes back to the host.
  */
 
 import { PDFDocument } from 'pdf-lib';
-import { parseZpl } from '../renderer/parser';
 import { drawPage } from '../renderer/draw';
 import { RenderResult } from '../renderer/ir';
+import { LabelFormatId } from '../core/formats';
+import { parseLabel } from '../core/pipeline';
 import { BwipBarcodeRenderer } from './barcodeAdapter';
 
 declare function acquireVsCodeApi(): {
@@ -19,6 +20,8 @@ declare function acquireVsCodeApi(): {
 interface RenderMessage {
   type: 'render';
   source: string;
+  /** Printer language of the document; detected from the text when absent. */
+  format?: LabelFormatId;
   options: {
     dpmm: number;
     widthInches: number;
@@ -31,6 +34,8 @@ interface RenderMessage {
 interface ExportMessage {
   type: 'export';
   format: 'png' | 'pdf';
+  /** Printer language of the document being exported. */
+  labelFormat?: LabelFormatId;
   requestId: string;
   source: string;
   options: {
@@ -165,7 +170,8 @@ function renderDocument(msg: RenderMessage): void {
     return;
   }
   try {
-    lastResult = parseZpl(msg.source, {
+    lastResult = parseLabel(msg.source, {
+      format: msg.format,
       dpmm: msg.options.dpmm,
       widthInches: msg.options.widthInches,
       heightInches: msg.options.heightInches,
@@ -191,7 +197,8 @@ function paint(): void {
     canvas.style.display = 'none';
     if (boot) {
       boot.style.display = '';
-      boot.textContent = 'No renderable labels found (missing ^XA … ^XZ).';
+      boot.textContent =
+        'No renderable labels found. A ZPL format runs from ^XA to ^XZ; an EPL format ends with P.';
     }
     status.textContent = 'no labels';
     pageLabel.textContent = '0 / 0';
@@ -233,7 +240,8 @@ async function handleExport(msg: ExportMessage): Promise<void> {
     return;
   }
   try {
-    const result = parseZpl(msg.source, {
+    const result = parseLabel(msg.source, {
+      format: msg.labelFormat,
       dpmm: msg.options.dpmm,
       widthInches: msg.options.widthInches,
       heightInches: msg.options.heightInches,

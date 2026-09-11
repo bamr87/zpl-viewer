@@ -1,15 +1,24 @@
 import * as vscode from 'vscode';
 import { tokenize, ZplToken } from '../zplParser';
 import { findCommand } from '../zplCommands';
+import { tokenizeEpl } from '../formats/epl/tokenizer';
+import { findEplCommand } from '../formats/epl/commands';
+import { formatOfDocument } from '../config';
 
 /**
- * Provides a document outline. Each `^XA` … `^XZ` block is a label symbol
- * containing its notable children (fields, barcodes, graphics).
+ * Document outline. Each label is a symbol containing its notable children
+ * (fields, barcodes, graphics), for both ZPL and EPL documents.
  */
-export class ZplSymbolProvider implements vscode.DocumentSymbolProvider {
+export class LabelSymbolProvider implements vscode.DocumentSymbolProvider {
   provideDocumentSymbols(
     document: vscode.TextDocument,
   ): vscode.ProviderResult<vscode.DocumentSymbol[]> {
+    return formatOfDocument(document) === 'epl'
+      ? this.symbolsEpl(document)
+      : this.symbolsZpl(document);
+  }
+
+  private symbolsZpl(document: vscode.TextDocument): vscode.DocumentSymbol[] {
     const tokens = tokenize(document.getText());
     const symbols: vscode.DocumentSymbol[] = [];
 
@@ -99,4 +108,77 @@ export class ZplSymbolProvider implements vscode.DocumentSymbolProvider {
 
     return symbols;
   }
+
+  private symbolsEpl(document: vscode.TextDocument): vscode.DocumentSymbol[] {
+    const tokens = tokenizeEpl(document.getText());
+    const symbols: vscode.DocumentSymbol[] = [];
+    let labelIndex = 0;
+    let current: vscode.DocumentSymbol | undefined;
+    let openStart: number | undefined;
+
+    const startLabel = (start: number, end: number): void => {
+      labelIndex += 1;
+      const range = new vscode.Range(
+        document.positionAt(start),
+        document.positionAt(end),
+      );
+      current = new vscode.DocumentSymbol(
+        `Label ${labelIndex}`,
+        '',
+        vscode.SymbolKind.Namespace,
+        range,
+        range,
+      );
+      openStart = start;
+      symbols.push(current);
+    };
+
+    for (const token of tokens) {
+      if (token.name === 'N') {
+        startLabel(token.start, token.end);
+        continue;
+      }
+      if (!current) {
+        startLabel(token.start, token.end);
+      }
+      const range = new vscode.Range(
+        document.positionAt(token.start),
+        document.positionAt(token.end),
+      );
+      if (token.name === 'P' && current && openStart !== undefined) {
+        current.range = new vscode.Range(
+          document.positionAt(openStart),
+          document.positionAt(token.end),
+        );
+        current = undefined;
+        openStart = undefined;
+        continue;
+      }
+
+      const cmd = findEplCommand(token.name);
+      if (!cmd || !current) {
+        continue;
+      }
+      let kind: vscode.SymbolKind | undefined;
+      let name = '';
+      if (token.name === 'A') {
+        kind = vscode.SymbolKind.String;
+        name = `A "${(token.data ?? '').slice(0, 40)}"`;
+      } else if (token.name === 'B' || token.name === 'b') {
+        kind = vscode.SymbolKind.Enum;
+        name = `${token.name} "${(token.data ?? '').slice(0, 32)}"`;
+      } else if (token.name === 'X' || token.name.startsWith('L') || token.name === 'GW') {
+        kind = vscode.SymbolKind.Struct;
+        name = `${token.name} ${token.raw.slice(0, 30)}`;
+      }
+      if (kind !== undefined && name) {
+        current.children.push(
+          new vscode.DocumentSymbol(name, cmd.title, kind, range, range),
+        );
+      }
+    }
+
+    return symbols;
+  }
 }
+

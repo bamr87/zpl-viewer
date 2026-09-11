@@ -5,7 +5,8 @@ import { createCanvas } from '@napi-rs/canvas';
 import { expect } from 'chai';
 import { BarcodeOp } from '../../../renderer/ir';
 import { BarcodeRenderer, drawPage } from '../../../renderer/draw';
-import { parseZpl } from '../../../renderer/parser';
+import { parseLabel } from '../../../core/pipeline';
+import { bwipIdFor } from '../../../barcode/symbologies';
 import { comparePngBuffers, writePng } from '../../helpers/canvas';
 import { PNG } from 'pngjs';
 
@@ -13,7 +14,7 @@ class NodeBarcodeRenderer implements BarcodeRenderer {
   render(op: BarcodeOp) {
     const canvas = createCanvas(1, 1);
     (bwipjs as unknown as { toCanvas: (c: unknown, o: unknown) => void }).toCanvas(canvas as never, {
-      bcid: op.symbology === 'qrcode' ? 'qrcode' : 'code128',
+      bcid: bwipIdFor(op.symbology),
       text: op.data || 'TEST',
       includetext: false,
       scale: Math.max(1, op.moduleWidth || 2),
@@ -64,7 +65,9 @@ export function assertFixtureMatchesGolden(
   );
 
   const source = fs.readFileSync(path.join(fixturesRoot, fixtureName), 'utf8');
-  const parsed = parseZpl(source);
+  // The fixture's extension picks the printer language, so one harness covers
+  // every format the renderer supports.
+  const parsed = parseLabel(source, { fileName: fixtureName });
   expect(parsed.pages.length).to.be.greaterThan(0);
   const page = parsed.pages[0];
   const canvas = createCanvas(page.width, page.height);

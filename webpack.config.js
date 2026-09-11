@@ -39,10 +39,15 @@ const webviewConfig = {
   name: 'webview',
   target: 'web',
   mode: 'none',
-  entry: './src/webview/main.ts',
+  // Two pages share the webview bundle config: the label preview and the
+  // barcode studio.
+  entry: {
+    preview: './src/webview/main.ts',
+    studio: './src/webview/studio/main.ts',
+  },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),
-    filename: 'preview.js',
+    filename: '[name].js',
   },
   resolve: {
     extensions: ['.ts', '.js'],
@@ -77,6 +82,10 @@ const webviewConfig = {
         {
           from: path.resolve(__dirname, 'src', 'webview', 'preview.html'),
           to: path.resolve(__dirname, 'dist', 'webview', 'preview.html'),
+        },
+        {
+          from: path.resolve(__dirname, 'src', 'webview', 'studio', 'studio.html'),
+          to: path.resolve(__dirname, 'dist', 'webview', 'studio.html'),
         },
       ],
     }),
