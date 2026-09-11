@@ -206,7 +206,7 @@ npm test                     # everything
 
 ### Testing layers
 
-1. **Unit (`src/test/unit`)** — parsers, emitters, barcode rules, data pipeline, analysis, importers, deploy transports (including a real loopback socket).
+1. **Unit (`src/test/unit`)** — parsers, emitters, barcode rules, data pipeline, analysis, importers, deploy transports (including a real loopback socket), and the renderer's draw-call geometry.
 2. **Visual (`src/test/renderer/visual`)** — renders fixtures with `@napi-rs/canvas` and compares against golden PNGs.
 3. **Integration (`src/test/integration`)** — runs in a real VS Code host: commands, providers, diagnostics, merge and dry-run deploy.
 4. **E2E (`src/test/e2e`)** — drives the compiled preview and barcode-studio webview bundles in Chromium.
@@ -214,7 +214,7 @@ npm test                     # everything
 ### Golden image workflow
 
 - Goldens live in `src/test/renderer/visual/golden/<platform>/`, one set per `process.platform`, because system-font text rendering differs between operating systems. A missing golden for your platform is generated on first run.
-- The EPL golden is deliberately text-free (boxes and barcodes only), so it is identical everywhere.
+- A golden is bound to the machine that produced it more tightly than the directory layout suggests: fonts differ per OS, and the Skia build behind `@napi-rs/canvas` differs per platform *and* per CI runner image, which moves box and barcode edges too. A text-free fixture is **not** portable either. Cross-platform geometry coverage therefore lives in the unit layer (`src/test/unit/render.test.ts`), which records the Canvas 2D calls instead of rasterizing them; the pixel goldens are a same-machine regression net on top of that.
 - When rendering behavior changes intentionally:
 
 ```bash

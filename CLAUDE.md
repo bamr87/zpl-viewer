@@ -30,7 +30,7 @@ npm test                     # full pipeline: unit + visual + integration + e2e
 - Add a printer language by creating `src/formats/<id>/` and registering it in `src/core/formats.ts`; parse into the existing IR rather than inventing a second one.
 - `src/barcode/symbologies.ts` is the single source of truth for symbologies (encoder id, ZPL command, EPL selector, charset, length, check digit). Never hard-code a symbology mapping elsewhere.
 - Settings are read through `src/config.ts` so the legacy `zplViewer.*` keys keep working; new commands use the `labelStudio.*` namespace and keep an alias if they replace an old id.
-- Visual goldens are per-platform because system fonts differ; a text-free fixture (see `epl-geometry.epl`) is the way to get a portable golden.
+- Visual goldens are bound to the machine that produced them — system fonts differ per OS, and the Skia build behind `@napi-rs/canvas` differs per platform and per CI runner image, so even a text-free label's box and barcode edges move. Cover rendering geometry portably in `src/test/unit/render.test.ts` (which records Canvas 2D calls); treat the pixel goldens as a same-machine net, and never add a golden you cannot regenerate where CI runs.
 
 ## Conventions
 
