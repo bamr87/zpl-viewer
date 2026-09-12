@@ -61,7 +61,7 @@ Everything between an image file and printable dots, and pure so the preview sha
 - `extension.ts` — activation: registers providers for every label language, diagnostics, the explorer views and all commands.
 - `config.ts` — every settings read, with fallback to the legacy `zplViewer.*` keys.
 - `previewPanel.ts` — owns the preview webview, pushes document text + render options, receives export bytes.
-- `providers/` — hover, completion, symbols, folding, formatting; each one dispatches on the document's language.
+- `providers/` — hover, completion, symbols, folding, formatting; each one dispatches on the document's language. `formatter.ts` exports its edits as well as the provider, because `labelStudio.formatDocument` has to apply them to the document it was handed: VS Code's own `editor.action.formatDocument` formats whichever code editor has focus, and none does while the preview webview holds it.
 - `ui/` — `commands.ts` (every command, kept thin, plus `LABEL_ACTIONS`: the single catalog the action quick pick and the Actions tree both read), `labelExplorer.ts` (the five activity-bar trees), `statusBar.ts` (the label's language/size/density, and the click target for the action list), `barcodeStudio.ts` (studio webview host).
 
   Commands take an optional target — a tree node, an explorer URI, or nothing — and resolve it to a document, so the same command works from a menu, the palette and the preview toolbar. A menu entry whose `when` clause cannot match any tree item's `contextValue` fails silently in VS Code, so `src/test/integration/ui.test.ts` asserts that every declared command, menu entry, submenu and `viewItem` actually connects to something.

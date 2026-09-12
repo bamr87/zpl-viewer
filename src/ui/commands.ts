@@ -38,6 +38,7 @@ import { emitEplPage } from '../emit/epl';
 import { pagesToSvg } from '../emit/svg';
 import { BwipSvgRenderer } from '../barcode/svgRenderer';
 import { supportedImageExtensions } from '../image/decode';
+import { labelFormattingEdits } from '../providers/formatter';
 import { BarcodeStudioPanel } from './barcodeStudio';
 import { LabelExplorer } from './labelExplorer';
 import {
@@ -92,10 +93,22 @@ export function registerCommands(deps: CommandContext): vscode.Disposable[] {
 
     // ---------------------------------------------------------------- edit
     register('labelStudio.formatDocument', async (target?: unknown) => {
-      if (!(await resolveLabelEditor(target))) {
+      const editor = await resolveLabelEditor(target);
+      if (!editor) {
         return;
       }
-      await vscode.commands.executeCommand('editor.action.formatDocument');
+      // Apply the edits here rather than delegating to
+      // `editor.action.formatDocument`: that command formats whichever code
+      // editor has focus, which is not this one when the label was picked in
+      // the Labels view, and is nothing at all while a preview webview holds
+      // focus.
+      const edits = labelFormattingEdits(editor.document);
+      if (edits.length === 0) {
+        return;
+      }
+      const edit = new vscode.WorkspaceEdit();
+      edit.set(editor.document.uri, edits);
+      await vscode.workspace.applyEdit(edit);
     }),
     register('labelStudio.validate', async (target?: unknown) => {
       const document = await resolveLabelDocument(target);
