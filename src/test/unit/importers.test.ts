@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import * as zlib from 'zlib';
-import { decodePng, isPng } from '../../importers/png';
+import { decodePng, isPng } from '../../image/png';
 import {
   bitmapToEplGraphicWrite,
   bitmapToZplGraphicField,

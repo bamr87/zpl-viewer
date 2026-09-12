@@ -22,6 +22,7 @@ import {
   TextOp,
 } from '../renderer/ir';
 import { findSymbology } from '../barcode/symbologies';
+import { encodeAsciiHexGraphic } from '../renderer/graphics';
 import { escapeZplData } from '../data/template';
 
 export interface EmitResult {
@@ -92,17 +93,26 @@ function emitEllipse(op: EllipseOp): string {
   return `^FO${op.x},${op.y}^GE${op.width},${op.height},${op.thickness},${op.color}^FS`;
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  let out = '';
-  for (const byte of bytes) {
-    out += byte.toString(16).toUpperCase().padStart(2, '0');
-  }
-  return out;
-}
-
-function emitImage(op: ImageOp): string {
+function emitImage(op: ImageOp, warnings: string[]): string {
   const total = op.bitmap.length;
-  return `^FO${op.x},${op.y}^GFA,${total},${total},${op.bytesPerRow},${bytesToHex(op.bitmap)}^FS`;
+  const reverse = op.invert ?? op.reverse ? '^FR' : '';
+  const field = `^GFA,${total},${total},${op.bytesPerRow},${encodeAsciiHexGraphic(op.bitmap, op.bytesPerRow)}`;
+
+  const scaleX = Math.max(1, Math.round(op.scaleX ?? 1));
+  const scaleY = Math.max(1, Math.round(op.scaleY ?? 1));
+  if (scaleX === 1 && scaleY === 1) {
+    return `^FO${op.x},${op.y}${reverse}${field}^FS`;
+  }
+
+  // A `^GF` carries no magnification of its own — only `^XG` does, and that
+  // needs the graphic to already live in printer memory. Downloading it and
+  // recalling it keeps the size exact and costs one extra command.
+  warnings.push(
+    `Magnified graphic emitted as ~DG + ^XG so the ${scaleX}x${scaleY} scale survives.`,
+  );
+  const name = (op.sourceName ?? `GFX${op.x}X${op.y}`).replace(/[^A-Z0-9]/gi, '').slice(0, 8) || 'GFX';
+  const download = `~DGR:${name}.GRF,${total},${op.bytesPerRow},${encodeAsciiHexGraphic(op.bitmap, op.bytesPerRow)}`;
+  return `${download}\n^FO${op.x},${op.y}${reverse}^XGR:${name}.GRF,${scaleX},${scaleY}^FS`;
 }
 
 /** Builds the ZPL barcode command for an op, without the field data. */
@@ -176,7 +186,7 @@ function emitOp(op: Op, warnings: string[]): string {
     case 'barcode':
       return emitBarcode(op, warnings);
     case 'image':
-      return emitImage(op);
+      return emitImage(op, warnings);
     default:
       return '';
   }

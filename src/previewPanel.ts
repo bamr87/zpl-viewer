@@ -304,8 +304,22 @@ class LabelPreviewPanel {
     level?: string;
     message?: string;
     detail?: string;
+    command?: string;
   }): void {
     switch (msg.type) {
+      case 'run-command': {
+        // The preview's toolbar runs host commands, so the buttons there stay
+        // the same actions as the menus — and it passes its own document, since
+        // clicking inside a webview leaves no active text editor to fall back
+        // to.
+        const command = msg.command ?? '';
+        if (!command.startsWith('labelStudio.')) {
+          this.output.appendLine(`[preview] refused to run "${command}"`);
+          break;
+        }
+        void vscode.commands.executeCommand(command, this.document.uri);
+        break;
+      }
       case 'ready':
         this.isReady = true;
         this.output.appendLine('[preview] webview ready');

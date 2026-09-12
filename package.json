@@ -1,7 +1,7 @@
 {
   "name": "zpl-viewer",
-  "displayName": "Label Studio — Labels, Barcodes & Data",
-  "description": "Read, create, analyze, import, merge and deploy thermal labels: ZPL II and EPL2 language support, live preview, a barcode studio for 24 symbologies, CSV/JSON data merge, and printer deployment — all offline.",
+  "displayName": "Label Studio \u2014 Labels, Barcodes & Data",
+  "description": "Read, create, analyze, import, merge and deploy thermal labels: ZPL II and EPL2 language support, live preview, a barcode studio for 24 symbologies, CSV/JSON data merge, and printer deployment \u2014 all offline.",
   "version": "0.2.0",
   "publisher": "zpl-viewer",
   "license": "MIT",
@@ -110,6 +110,11 @@
     "views": {
       "labelStudio": [
         {
+          "id": "labelStudio.actionsView",
+          "name": "Actions",
+          "icon": "images/activity-icon.svg"
+        },
+        {
           "id": "labelStudio.labelsView",
           "name": "Labels",
           "icon": "images/activity-icon.svg"
@@ -139,6 +144,10 @@
       {
         "view": "labelStudio.labelsView",
         "contents": "No label files found in this workspace.\n[New label from template](command:labelStudio.newFromTemplate)\n[Import a printer capture](command:labelStudio.importCapture)"
+      },
+      {
+        "view": "labelStudio.dataView",
+        "contents": "No CSV, TSV or JSON data sources found in this workspace.\nAdd one, then merge it through a label to print a row per record.\n[Check data mapping](command:labelStudio.checkMapping)"
       }
     ],
     "commands": [
@@ -163,22 +172,32 @@
       {
         "command": "labelStudio.exportPng",
         "title": "Export Label as PNG",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(file-media)"
       },
       {
         "command": "labelStudio.exportPdf",
         "title": "Export Labels as PDF",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(file-pdf)"
+      },
+      {
+        "command": "labelStudio.exportSvg",
+        "title": "Export Label as SVG (vector)",
+        "category": "Label",
+        "icon": "$(symbol-color)"
       },
       {
         "command": "labelStudio.formatDocument",
         "title": "Format Label Document",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(list-flat)"
       },
       {
         "command": "labelStudio.validate",
         "title": "Validate Label",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(check)"
       },
       {
         "command": "labelStudio.analyze",
@@ -189,7 +208,8 @@
       {
         "command": "labelStudio.insertTemplate",
         "title": "Insert Label Snippet",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(add)"
       },
       {
         "command": "labelStudio.newFromTemplate",
@@ -200,7 +220,8 @@
       {
         "command": "labelStudio.convertFormat",
         "title": "Convert Label to Another Printer Language",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(arrow-swap)"
       },
       {
         "command": "labelStudio.openBarcodeStudio",
@@ -211,22 +232,26 @@
       {
         "command": "labelStudio.insertBarcode",
         "title": "Insert Barcode Field",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(add)"
       },
       {
         "command": "labelStudio.importImage",
         "title": "Import Image as Label Graphic",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(file-media)"
       },
       {
         "command": "labelStudio.importCapture",
         "title": "Import Printer Capture",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(inbox)"
       },
       {
         "command": "labelStudio.previewDataSource",
         "title": "Preview Data Source",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(eye)"
       },
       {
         "command": "labelStudio.mergeData",
@@ -237,7 +262,8 @@
       {
         "command": "labelStudio.checkMapping",
         "title": "Check Data Mapping",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(checklist)"
       },
       {
         "command": "labelStudio.deploy",
@@ -248,7 +274,8 @@
       {
         "command": "labelStudio.deployDryRun",
         "title": "Deploy Label (dry run)",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(debug-step-over)"
       },
       {
         "command": "labelStudio.addPrinter",
@@ -265,7 +292,44 @@
       {
         "command": "labelStudio.showOutput",
         "title": "Show Deployment Log",
-        "category": "Label"
+        "category": "Label",
+        "icon": "$(output)"
+      },
+      {
+        "command": "labelStudio.showActions",
+        "title": "Label Actions\u2026",
+        "category": "Label",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "labelStudio.editPrinter",
+        "title": "Edit Printer",
+        "category": "Label",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "labelStudio.removePrinter",
+        "title": "Remove Printer",
+        "category": "Label",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "labelStudio.setDensity",
+        "title": "Set Print Density",
+        "category": "Label",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "labelStudio.setLabelSize",
+        "title": "Set Label Size",
+        "category": "Label",
+        "icon": "$(screen-normal)"
+      },
+      {
+        "command": "labelStudio.openSettings",
+        "title": "Open Label Studio Settings",
+        "category": "Label",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -276,9 +340,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "labelStudio.refreshExplorer",
+          "command": "labelStudio.importCapture",
           "when": "view == labelStudio.labelsView",
           "group": "navigation@2"
+        },
+        {
+          "command": "labelStudio.refreshExplorer",
+          "when": "view == labelStudio.labelsView",
+          "group": "navigation@3"
         },
         {
           "command": "labelStudio.refreshExplorer",
@@ -291,12 +360,57 @@
           "group": "navigation@1"
         },
         {
+          "command": "labelStudio.showOutput",
+          "when": "view == labelStudio.printersView",
+          "group": "navigation@2"
+        },
+        {
           "command": "labelStudio.refreshExplorer",
           "when": "view == labelStudio.printersView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "labelStudio.newFromTemplate",
+          "when": "view == labelStudio.templatesView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.showActions",
+          "when": "view == labelStudio.actionsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.openSettings",
+          "when": "view == labelStudio.actionsView",
           "group": "navigation@2"
         }
       ],
       "view/item/context": [
+        {
+          "command": "labelStudio.previewToSide",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@3"
+        },
+        {
+          "submenu": "labelStudio.labelActions",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "1_label@1"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "when": "view == labelStudio.dataView && viewItem == dataSource",
+          "group": "inline@1"
+        },
         {
           "command": "labelStudio.previewDataSource",
           "when": "view == labelStudio.dataView && viewItem == dataSource",
@@ -315,73 +429,93 @@
         {
           "command": "labelStudio.deploy",
           "when": "view == labelStudio.printersView && viewItem == printer",
-          "group": "labelStudio@1"
+          "group": "inline@1"
+        },
+        {
+          "command": "labelStudio.editPrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "inline@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "1_deploy@1"
         },
         {
           "command": "labelStudio.deployDryRun",
           "when": "view == labelStudio.printersView && viewItem == printer",
-          "group": "labelStudio@2"
+          "group": "1_deploy@2"
+        },
+        {
+          "command": "labelStudio.showOutput",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "1_deploy@3"
+        },
+        {
+          "command": "labelStudio.editPrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "labelStudio.removePrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "2_edit@2"
+        },
+        {
+          "command": "labelStudio.newFromTemplate",
+          "when": "view == labelStudio.templatesView && viewItem == labelTemplate",
+          "group": "inline@1"
         }
       ],
       "editor/title": [
         {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
           "command": "labelStudio.previewToSide",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
           "group": "navigation@1"
         },
         {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
           "command": "labelStudio.analyze",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
           "group": "navigation@2"
+        },
+        {
+          "submenu": "labelStudio.labelActions",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
+          "group": "1_run@1"
         }
       ],
       "editor/context": [
         {
+          "submenu": "labelStudio.labelActions",
           "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.preview",
           "group": "labelStudio@1"
-        },
-        {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.insertBarcode",
-          "group": "labelStudio@2"
-        },
-        {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.mergeData",
-          "group": "labelStudio@3"
-        },
-        {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.deploy",
-          "group": "labelStudio@4"
-        },
-        {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.formatDocument",
-          "group": "labelStudio@5"
         }
       ],
       "explorer/context": [
         {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.preview",
+          "submenu": "labelStudio.labelActions",
+          "when": "resourceExtname == .zpl || resourceExtname == .zpl2 || resourceExtname == .epl || resourceExtname == .epl2 || resourceExtname == .prn || resourceExtname == .lbl",
           "group": "labelStudio@1"
         },
         {
-          "when": "resourceLangId == zpl || resourceLangId == epl",
-          "command": "labelStudio.analyze",
+          "command": "labelStudio.previewDataSource",
+          "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
           "group": "labelStudio@2"
         },
         {
+          "command": "labelStudio.mergeData",
           "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
-          "command": "labelStudio.previewDataSource",
           "group": "labelStudio@3"
         },
         {
+          "command": "labelStudio.checkMapping",
           "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
-          "command": "labelStudio.mergeData",
           "group": "labelStudio@4"
+        },
+        {
+          "command": "labelStudio.importImage",
+          "when": "resourceExtname == .png || resourceExtname == .bmp",
+          "group": "labelStudio@5"
         }
       ],
       "commandPalette": [
@@ -403,6 +537,10 @@
         },
         {
           "command": "labelStudio.exportPdf",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.exportSvg",
           "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
@@ -445,6 +583,70 @@
           "command": "labelStudio.deployDryRun",
           "when": "resourceLangId == zpl || resourceLangId == epl"
         }
+      ],
+      "labelStudio.labelActions": [
+        {
+          "command": "labelStudio.preview",
+          "group": "1_view@1"
+        },
+        {
+          "command": "labelStudio.previewToSide",
+          "group": "1_view@2"
+        },
+        {
+          "command": "labelStudio.exportPng",
+          "group": "2_export@1"
+        },
+        {
+          "command": "labelStudio.exportPdf",
+          "group": "2_export@2"
+        },
+        {
+          "command": "labelStudio.exportSvg",
+          "group": "2_export@3"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "group": "3_check@1"
+        },
+        {
+          "command": "labelStudio.validate",
+          "group": "3_check@2"
+        },
+        {
+          "command": "labelStudio.formatDocument",
+          "group": "4_edit@1"
+        },
+        {
+          "command": "labelStudio.insertBarcode",
+          "group": "4_edit@2"
+        },
+        {
+          "command": "labelStudio.convertFormat",
+          "group": "4_edit@3"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "group": "5_data@1"
+        },
+        {
+          "command": "labelStudio.checkMapping",
+          "group": "5_data@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "group": "6_deploy@1"
+        },
+        {
+          "command": "labelStudio.deployDryRun",
+          "group": "6_deploy@2"
+        }
+      ],
+      "file/newFile": [
+        {
+          "command": "labelStudio.newFromTemplate",
+          "group": "file@1"
+        }
       ]
     },
     "keybindings": [
@@ -452,6 +654,12 @@
         "command": "labelStudio.previewToSide",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
+        "when": "editorLangId == zpl || editorLangId == epl"
+      },
+      {
+        "command": "labelStudio.showActions",
+        "key": "ctrl+k l",
+        "mac": "cmd+k l",
         "when": "editorLangId == zpl || editorLangId == epl"
       }
     ],
@@ -572,6 +780,27 @@
           "minimum": 8,
           "maximum": 4000,
           "description": "Imported images wider than this many dots are scaled down to fit."
+        },
+        "labelStudio.import.invert": {
+          "type": "boolean",
+          "default": false,
+          "description": "Swap black and white when importing artwork. Use for light logos meant to print on a dark field."
+        },
+        "labelStudio.import.trim": {
+          "type": "boolean",
+          "default": false,
+          "description": "Crop blank margins from imported artwork so the graphic starts where the ink does."
+        },
+        "labelStudio.import.rotate": {
+          "type": "number",
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "default": 0,
+          "description": "Rotate imported artwork clockwise by this many degrees."
         },
         "labelStudio.deploy.confirmBeforeSend": {
           "type": "boolean",
@@ -735,7 +964,14 @@
         "editor.tabSize": 2,
         "editor.insertSpaces": true
       }
-    }
+    },
+    "submenus": [
+      {
+        "id": "labelStudio.labelActions",
+        "label": "Label Studio",
+        "icon": "$(tag)"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -746,26 +982,22 @@
     "watch-tests": "tsc -p ./tsconfig.test.json -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/draw.test.js\"",
-    "test:visual": "npm run compile-tests && mocha \"out/test/renderer/visual/**/*.test.js\"",
-    "test:visual:update": "cross-env UPDATE_GOLDENS=1 npm run test:visual",
+    "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/**/*.test.js\"",
     "test:integration": "npm run compile-tests && cross-env VSCODE_ZPL_TEST=1 node ./out/test/runTest.js",
     "test:e2e": "playwright test -c src/test/e2e/playwright.config.ts",
-    "test": "npm run test:unit && npm run test:visual && npm run test:integration && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:integration && npm run test:e2e"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.99",
     "@playwright/test": "^1.59.1",
     "@types/chai": "^5.2.3",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.11.0",
-    "@types/pngjs": "^6.0.5",
     "@types/sinon": "^21.0.1",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vscode/test-electron": "^2.3.9",
+    "@vscode/test-electron": "^3.1.0",
     "c8": "^11.0.0",
     "chai": "^4.5.0",
     "copy-webpack-plugin": "^14.0.0",
@@ -773,8 +1005,6 @@
     "eslint": "^8.57.0",
     "glob": "^13.0.6",
     "mocha": "^11.7.5",
-    "pixelmatch": "^7.1.0",
-    "pngjs": "^7.0.0",
     "sinon": "^21.1.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
@@ -785,5 +1015,8 @@
   "dependencies": {
     "bwip-js": "^4.10.1",
     "pdf-lib": "^1.17.1"
+  },
+  "overrides": {
+    "yargs": "^17.7.3"
   }
 }

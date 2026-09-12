@@ -1,20 +1,20 @@
 /**
- * Minimal PNG decoder built on Node's zlib.
+ * PNG decoder.
  *
  * Importing a logo is the most common "get this artwork onto the label" task,
  * and it has to work offline, so rather than adding an image library this
- * decodes the subset of PNG that design tools actually emit: non-interlaced,
- * 8- or 16-bit, greyscale / RGB / palette / alpha.
+ * decodes PNG directly: any bit depth, greyscale / RGB / palette / alpha, and
+ * both scan orders (progressive Adam7 included).
+ *
+ * Inflation goes through the repository's own DEFLATE implementation rather
+ * than Node's `zlib` so that this module stays in the pure layer: the preview
+ * webview needs it too, to draw the PNGs that `~DY` downloads into a label.
  */
 
-import * as zlib from 'zlib';
+import { inflate } from '../core/inflate';
+import { DecodedImage } from './types';
 
-export interface DecodedImage {
-  width: number;
-  height: number;
-  /** Row-major RGBA, 4 bytes per pixel. */
-  rgba: Uint8Array;
-}
+export type { DecodedImage };
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
@@ -157,9 +157,6 @@ export function decodePng(bytes: Uint8Array): DecodedImage {
       bitDepth = data[8];
       colorType = data[9];
       interlace = data[12];
-      if (interlace !== 0) {
-        throw new Error('Interlaced PNG images are not supported.');
-      }
     } else if (type === 'PLTE') {
       palette = new Uint8Array(data);
     } else if (type === 'tRNS') {
@@ -180,29 +177,58 @@ export function decodePng(bytes: Uint8Array): DecodedImage {
     throw new Error('PNG has no image data.');
   }
 
-  const compressed = Buffer.concat(idat.map((chunk) => Buffer.from(chunk)));
-  const raw = new Uint8Array(zlib.inflateSync(compressed));
+  let totalLength = 0;
+  for (const chunk of idat) {
+    totalLength += chunk.length;
+  }
+  const compressed = new Uint8Array(totalLength);
+  let compressedOffset = 0;
+  for (const chunk of idat) {
+    compressed.set(chunk, compressedOffset);
+    compressedOffset += chunk.length;
+  }
+  const raw = inflate(compressed);
 
   const channels = samplesPerPixel(colorType);
   const bitsPerPixel = channels * bitDepth;
-  const bytesPerRow = Math.ceil((width * bitsPerPixel) / 8);
   const bytesPerPixel = Math.max(1, Math.ceil(bitsPerPixel / 8));
-  const unfiltered = unfilter(raw, width, height, bytesPerPixel, bytesPerRow);
 
   const rgba = new Uint8Array(width * height * 4);
   const maxValue = (1 << bitDepth) - 1;
 
-  for (let y = 0; y < height; y += 1) {
-    const row = unfiltered.subarray(y * bytesPerRow, (y + 1) * bytesPerRow);
+  const passes = interlace === 1
+    ? adam7Passes(width, height)
+    : [{ xStart: 0, yStart: 0, xStep: 1, yStep: 1, width, height }];
+
+  let rawOffset = 0;
+  for (const pass of passes) {
+    if (pass.width === 0 || pass.height === 0) {
+      continue;
+    }
+    const passBytesPerRow = Math.ceil((pass.width * bitsPerPixel) / 8);
+    const passLength = pass.height * (passBytesPerRow + 1);
+    const unfiltered = unfilter(
+      raw.subarray(rawOffset, rawOffset + passLength),
+      pass.width,
+      pass.height,
+      bytesPerPixel,
+      passBytesPerRow,
+    );
+    rawOffset += passLength;
+
+  for (let passY = 0; passY < pass.height; passY += 1) {
+    const y = pass.yStart + passY * pass.yStep;
+    const row = unfiltered.subarray(passY * passBytesPerRow, (passY + 1) * passBytesPerRow);
     const samples =
-      bitDepth < 8 ? expandBits(row, bitDepth, width * channels) : row;
-    for (let x = 0; x < width; x += 1) {
+      bitDepth < 8 ? expandBits(row, bitDepth, pass.width * channels) : row;
+    for (let passX = 0; passX < pass.width; passX += 1) {
+      const x = pass.xStart + passX * pass.xStep;
       const target = (y * width + x) * 4;
       const read = (channel: number): number => {
         if (bitDepth === 16) {
-          return samples[(x * channels + channel) * 2];
+          return samples[(passX * channels + channel) * 2];
         }
-        return samples[x * channels + channel];
+        return samples[passX * channels + channel];
       };
       let r = 0;
       let g = 0;
@@ -249,6 +275,41 @@ export function decodePng(bytes: Uint8Array): DecodedImage {
       rgba[target + 3] = a;
     }
   }
+  }
 
   return { width, height, rgba };
+}
+
+interface Adam7Pass {
+  xStart: number;
+  yStart: number;
+  xStep: number;
+  yStep: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The seven passes of the Adam7 interlace scheme, sized for this image. Each
+ * pass is a complete little sub-image with its own filter bytes, which is why
+ * decoding walks passes rather than rows.
+ */
+function adam7Passes(width: number, height: number): Adam7Pass[] {
+  const geometry: Array<[number, number, number, number]> = [
+    [0, 0, 8, 8],
+    [4, 0, 8, 8],
+    [0, 4, 4, 8],
+    [2, 0, 4, 4],
+    [0, 2, 2, 4],
+    [1, 0, 2, 2],
+    [0, 1, 1, 2],
+  ];
+  return geometry.map(([xStart, yStart, xStep, yStep]) => ({
+    xStart,
+    yStart,
+    xStep,
+    yStep,
+    width: Math.ceil(Math.max(0, width - xStart) / xStep),
+    height: Math.ceil(Math.max(0, height - yStart) / yStep),
+  }));
 }

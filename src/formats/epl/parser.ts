@@ -95,10 +95,18 @@ function intArg(token: EplToken, index: number, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/**
+ * Reads a raw `GW` payload into the IR's bitmap convention.
+ *
+ * EPL and ZPL disagree about polarity: a `GW` bit that is 0 burns a dot, while
+ * the IR (like ZPL's `^GF`) treats a set bit as ink. Inverting here keeps one
+ * convention below the parsers, so the renderer, the metrics and the emitters
+ * do not each have to remember which language a graphic came from.
+ */
 function bytesFromRaw(data: string): Uint8Array {
   const out = new Uint8Array(data.length);
   for (let i = 0; i < data.length; i += 1) {
-    out[i] = data.charCodeAt(i) & 0xff;
+    out[i] = ~data.charCodeAt(i) & 0xff;
   }
   return out;
 }

@@ -9,11 +9,12 @@ A VS Code extension for everything that happens to a thermal label before it com
 | Verb | What you get |
 |---|---|
 | **Read** | Syntax highlighting, hover docs, IntelliSense, outline and folding for ZPL II and EPL2. |
-| **View** | Live label preview on a `<canvas>`, page navigation, zoom, PNG/PDF export. |
+| **View** | Live label preview on a `<canvas>`, page navigation, zoom, PNG/PDF/SVG export. |
 | **Create** | Starter templates (shipping, product, asset tag, shelf, GS1 carton), snippets, a barcode studio. |
 | **Modify** | Formatters for both languages, barcode field insertion, image import, format conversion. |
+| **Graphics** | Every ZPL graphic encoding renders: ASCII hex, Zebra's compressed hex, `:B64:` and `:Z64:`, plus `~DG`/`~DY` downloads recalled with `^XG`/`^IM`. |
 | **Analyze** | Label metrics, ink coverage, barcode inventory, and lint rules for data, bounds and scannability. |
-| **Import** | PNG artwork → graphic fields, raw printer captures → clean editable labels, CSV/JSON → data sources. |
+| **Import** | PNG/BMP artwork → graphic fields, raw printer captures → clean editable labels, CSV/JSON → data sources. |
 | **Integrate** | `{{placeholder}}` templates merged against CSV/TSV/JSON/JSONL with a filter pipeline and mapping checks. |
 | **Deploy** | Send to a printer over raw TCP 9100, a device path, or a spool directory — converting the language if needed. |
 
@@ -115,9 +116,27 @@ Then run **Label: Deploy Label to Printer**. If the document and the printer spe
 | `layout.out-of-bounds` / `clipped` | Fields that fall off the stock. |
 | `epl.missing-clear` / `missing-print` | EPL formats that reprint the previous label, or never print. |
 
+## Where to find things
+
+Every action is reachable without the Command Palette.
+
+| Surface | What it gives you |
+|---|---|
+| **Activity bar → Label Studio** | Five trees: **Actions** (every command, grouped), **Labels** (workspace label files by language), **Data sources**, **Printers**, **Templates**. |
+| **Tree item menus** | Right-click a label, data source, printer or template for the actions that apply to it; the common ones are inline icons on the row. |
+| **Editor title bar** | Preview and Analyze as buttons, with the rest under a **Label Studio** submenu. |
+| **Editor right-click** | A **Label Studio** submenu with view, export, check, edit, data and deploy actions. |
+| **Explorer right-click** | The same submenu on label files; preview/merge/mapping on `.csv`/`.json`; *Import Image as Label Graphic* on `.png`/`.bmp`. |
+| **Status bar** | Shows the label's language, stock size and density; click it for the full action list. |
+| **Preview toolbar** | Page navigation, zoom, refresh, PNG/PDF/SVG export, and `⋯` for everything else. |
+| **File → New File…** | *New Label from Template*, so you can start one before any label file exists. |
+| **Keyboard** | `Ctrl/Cmd+K V` opens the preview to the side, `Ctrl/Cmd+K L` opens the action list. |
+
+Anything that acts on a label uses the label you invoked it on — the file you right-clicked in a tree, the editor you are in, or the preview you are looking at.
+
 ## Commands
 
-All commands live under the `Label:` prefix in the Command Palette.
+All commands live under the `Label:` prefix in the Command Palette, and in the surfaces above.
 
 | Command | Description |
 |---|---|
@@ -125,6 +144,7 @@ All commands live under the `Label:` prefix in the Command Palette.
 | `Label: Refresh Preview` | Re-render. |
 | `Label: Export Label as PNG` | Save the first label as PNG. |
 | `Label: Export Labels as PDF` | Save every label as a multi-page PDF. |
+| `Label: Export Label as SVG (vector)` | Save each label as vector SVG — no preview panel needed. |
 | `Label: Format Label Document` | Run the language's formatter. |
 | `Label: Validate Label` | Re-run diagnostics. |
 | `Label: Analyze Label` | Metrics + findings report. |
@@ -133,7 +153,7 @@ All commands live under the `Label:` prefix in the Command Palette.
 | `Label: Convert Label to Another Printer Language` | ZPL ↔ EPL. |
 | `Label: Open Barcode Studio` | Build and validate a barcode interactively. |
 | `Label: Insert Barcode Field` | Pick a symbology, type data, insert the field. |
-| `Label: Import Image as Label Graphic` | PNG → `^GF` / `GW`. |
+| `Label: Import Image as Label Graphic` | PNG or BMP → `^GF` / `GW`. |
 | `Label: Import Printer Capture` | Clean a `.prn` capture into editable labels. |
 | `Label: Preview Data Source` | Table preview of a CSV/JSON file. |
 | `Label: Merge Data Into Labels` | Expand a template over every row. |
@@ -141,6 +161,12 @@ All commands live under the `Label:` prefix in the Command Palette.
 | `Label: Deploy Label to Printer` | Send to a configured printer. |
 | `Label: Deploy Label (dry run)` | Build the payload without sending. |
 | `Label: Add Printer` | Guided printer configuration. |
+| `Label: Edit Printer` | Open the printer profiles in settings JSON. |
+| `Label: Remove Printer` | Delete a printer from whichever settings scope defines it. |
+| `Label: Label Actions…` | Quick pick of every action that applies right now. |
+| `Label: Set Print Density` | Switch the renderer between 6/8/12/24 dpmm. |
+| `Label: Set Label Size` | Pick a stock size, or enter a custom one. |
+| `Label: Open Label Studio Settings` | Every setting this extension contributes. |
 
 The old `zplViewer.*` command ids still work as aliases, so existing keybindings and tasks keep running.
 
@@ -163,6 +189,9 @@ The old `zplViewer.*` command ids still work as aliases, so existing keybindings
 | `labelStudio.import.threshold` | `128` | Luminance cut-off for imported artwork. |
 | `labelStudio.import.dither` | `none` | `none` for logos, `floyd-steinberg` for photos. |
 | `labelStudio.import.maxWidthDots` | `600` | Downscale imported images to fit. |
+| `labelStudio.import.invert` | `false` | Swap black and white — for light artwork on a dark field. |
+| `labelStudio.import.trim` | `false` | Crop blank margins so the graphic starts where the ink does. |
+| `labelStudio.import.rotate` | `0` | Rotate imported artwork clockwise: `0`, `90`, `180`, `270`. |
 | `labelStudio.deploy.confirmBeforeSend` | `true` | Confirm before sending to a printer. |
 | `labelStudio.deploy.timeoutMs` | `10000` | Network printer timeout. |
 | `labelStudio.printers` | `[]` | Printer profiles (see [Deployment](#deployment)). |
@@ -172,21 +201,24 @@ Settings were renamed from `zplViewer.*` to `labelStudio.*`. An explicitly-set l
 ## Architecture
 
 ```
- label source (.zpl / .epl / .prn)      data (.csv / .json)        artwork (.png)
+ label source (.zpl / .epl / .prn)      data (.csv / .json)     artwork (.png / .bmp)
         │                                     │                          │
         ▼                                     ▼                          ▼
- core/formats.ts  ──►  formats/<lang>/parser  data/dataset.ts     importers/png.ts
-   (detect)                    │              data/template.ts    importers/imageToLabel.ts
+ core/formats.ts  ──►  formats/<lang>/parser  data/dataset.ts      image/decode.ts
+   (detect)                    │              data/template.ts     image/bitmap.ts
+                               │                     │              importers/imageToLabel.ts
                                ▼                     │                     │
                     renderer/ir.ts  ◄────────────────┴─────────────────────┘
                     (shared drawing-op IR)
                                │
-      ┌────────────────────────┼─────────────────────────┬──────────────────┐
-      ▼                        ▼                         ▼                  ▼
- renderer/draw.ts      analysis/metrics.ts        emit/zpl.ts        deploy/deploy.ts
- (canvas preview,      analysis/lint.ts           emit/epl.ts        (tcp / file /
-  PNG, PDF)            (findings + report)        (convert, create)   directory)
+   ┌─────────────────┬─────────┴──────────┬──────────────────┬──────────────────┐
+   ▼                 ▼                    ▼                  ▼                  ▼
+renderer/draw.ts  emit/svg.ts    analysis/metrics.ts   emit/zpl.ts      deploy/deploy.ts
+(canvas preview,  (vector SVG,   analysis/lint.ts      emit/epl.ts      (tcp / file /
+ PNG, PDF)         host-side)    (findings + report)   (convert, create) directory)
 ```
+
+Graphics take a short detour on the way into the IR: `renderer/graphics.ts` unwraps whichever encoding a `^GF`, `~DG` or `~DY` arrived in — plain hex, Zebra's compressed hex, `:B64:` or `:Z64:` — inflating the last of those with `core/inflate.ts`, a dependency-free DEFLATE that also backs the PNG decoder so both run in the webview.
 
 `src/README.md` documents each module in detail.
 
@@ -197,8 +229,7 @@ npm ci                       # install dependencies (Node 20)
 npm run watch                # webpack watch; then F5 for the Extension Development Host
 npm run compile              # build dist/extension.js + dist/webview/
 npm run lint                 # eslint src --ext ts
-npm run test:unit            # pure unit tests (mocha + c8)
-npm run test:visual          # renderer visual regression vs golden PNGs
+npm run test:unit            # pure unit tests + renderer draw-call geometry (mocha + c8)
 npm run test:integration     # VS Code extension-host suite
 npm run test:e2e             # Playwright webview tests
 npm test                     # everything
@@ -206,22 +237,22 @@ npm test                     # everything
 
 ### Testing layers
 
-1. **Unit (`src/test/unit`)** — parsers, emitters, barcode rules, data pipeline, analysis, importers, deploy transports (including a real loopback socket), and the renderer's draw-call geometry.
-2. **Visual (`src/test/renderer/visual`)** — renders fixtures with `@napi-rs/canvas` and compares against golden PNGs.
+1. **Unit (`src/test/unit`)** — parsers, emitters, graphics and image decoders, barcode rules, data pipeline, analysis, importers, deploy transports (including a real loopback socket).
+2. **Renderer (`src/test/renderer`)** — renders the sample labels and asserts the Canvas 2D calls they produce: positions, sizes, styles and the transform each was made under.
 3. **Integration (`src/test/integration`)** — runs in a real VS Code host: commands, providers, diagnostics, merge and dry-run deploy.
 4. **E2E (`src/test/e2e`)** — drives the compiled preview and barcode-studio webview bundles in Chromium.
 
-### Golden image workflow
+Layers 1 and 2 both run under `npm run test:unit`.
 
-- Goldens live in `src/test/renderer/visual/golden/<platform>/`, one set per `process.platform`, because system-font text rendering differs between operating systems. A missing golden for your platform is generated on first run.
-- A golden is bound to the machine that produced it more tightly than the directory layout suggests: fonts differ per OS, and the Skia build behind `@napi-rs/canvas` differs per platform *and* per CI runner image, which moves box and barcode edges too. A text-free fixture is **not** portable either. Cross-platform geometry coverage therefore lives in the unit layer (`src/test/unit/render.test.ts`), which records the Canvas 2D calls instead of rasterizing them; the pixel goldens are a same-machine regression net on top of that.
-- When rendering behavior changes intentionally:
+### Why there are no golden images
 
-```bash
-npm run test:visual:update
-```
+The renderer is covered by recorded draw calls rather than by committed PNGs.
 
-- Re-run `npm run test:visual` and review the PNG diffs in your Git diff before committing.
+Pixel goldens were tried and removed. A rendered label is bound to the machine that produced it far more tightly than it looks: system fonts differ per OS, and the Skia build behind a headless canvas differs per platform *and* per CI runner image, which moves box and barcode edges as well as text. In practice that meant a golden could only be regenerated on the machine that made it, and each platform needed its own set that nobody could verify from anywhere else.
+
+The failure mode that settled it: the goldens' own barcode encoder was calling a method that only exists in bwip-js's browser build. `drawPage` catches renderer errors and paints the message onto the label, so every committed golden had an error string where its barcode should have been — and the suite passed, for as long as the goldens existed, while asserting a broken render.
+
+Draw-call assertions pin the same geometry with no environment dependence, and a barcode that fails to encode now fails a test instead of being frozen into an expected image.
 
 ### Test-mode preview hook
 
@@ -247,21 +278,24 @@ npm run test:visual:update
 │   ├── barcode/                         # Symbology catalog + payload validation
 │   ├── data/                            # CSV/JSON loading, templating, merge
 │   ├── analysis/                        # Metrics, lint rules, markdown report
-│   ├── importers/                       # PNG decode, bitmap → graphic field, captures
+│   ├── image/                           # PNG/BMP decode, 1-bit conversion, transforms
+│   ├── importers/                       # Bitmap → graphic field, printer captures
 │   ├── deploy/                          # Printer profiles + transports
 │   ├── ui/                              # Commands, tree views, barcode studio host
 │   └── webview/                         # Preview + studio webview bundles
-├── src/test/                            # Unit / visual / integration / e2e + fixtures
+├── src/test/                            # Unit / renderer / integration / e2e + fixtures
 ├── .github/workflows/ci.yml             # 3-OS CI matrix
 └── samples/                             # Example labels and a sample data source
 ```
 
 ## Fidelity notes
 
-- **Fonts**: ZPL fonts (A-H) and EPL fonts (1-5) are proprietary printer bitmaps. The renderer approximates with the system sans-serif scaled to the requested cell size — close to a real printer, not pixel-identical.
+- **Fonts**: ZPL fonts (A-H) and EPL fonts (1-5) are proprietary printer bitmaps. The renderer approximates with the system sans-serif scaled to the requested cell size — close to a real printer, not pixel-identical. Scalable fonts (`^A0`, `^A@`) are drawn at their natural proportions, which is what a printer does with `^CF0,40`; bitmap fonts keep their declared cell aspect.
 - **Conversion is lossy in places**: EPL2 has no circle, ellipse or diagonal primitive and only five bitmap font sizes, so converting from ZPL reports every approximation instead of silently dropping geometry.
-- **`^GF` graphic fields** support ASCII-hex (A) and binary (B). Run-length and LZ77 compression (C, Z64, B64) are not implemented yet.
-- **Image import** reads non-interlaced PNG (8/16-bit greyscale, RGB, palette, alpha). Save other formats as PNG first.
+- **Graphics** decode from every encoding ZPL uses: plain ASCII hex, Zebra's compressed hex (`G`-`Y`/`g`-`z` run counts with `,`, `!` and `:` row operators), `:B64:` and `:Z64:`, and raw binary. A graphic whose CRC or declared length disagrees with its payload still renders as far as it decodes, with a warning — a partial logo beats a blank label when you are reading a capture.
+- **Stored graphics** downloaded with `~DG`/`~DY` persist across labels in a file, as they do in printer memory, and are drawn by `^XG` (with magnification) or `^IM`. A `^XG` naming a graphic the file never downloaded is reported rather than silently skipped.
+- **Image import** reads PNG (any bit depth, greyscale/RGB/palette/alpha, progressive or Adam7-interlaced) and BMP (1/4/8/16/24/32-bit, RLE-compressed or not, either scan direction).
+- **SVG export** is vector throughout: barcodes come from the same encoder the preview uses, and bitmaps become runs of rectangles rather than an embedded raster.
 - Unknown commands surface as diagnostics rather than aborting the render.
 
 ## License

@@ -52,7 +52,14 @@ export function opExtent(op: Op): OpExtent {
     case 'circle':
       return { x: op.x, y: op.y, width: op.diameter, height: op.diameter };
     case 'image':
-      return { x: op.x, y: op.y, width: op.width, height: op.height };
+      // ^XG magnification scales a recalled graphic, so the printed extent is
+      // not the stored bitmap's size.
+      return {
+        x: op.x,
+        y: op.y,
+        width: op.width * Math.max(1, op.scaleX ?? 1),
+        height: op.height * Math.max(1, op.scaleY ?? 1),
+      };
     case 'barcode': {
       const spec = findSymbology(op.symbology);
       if (spec?.kind === '2d') {
@@ -124,7 +131,11 @@ export function estimateInkArea(op: Op): number {
       // Bars and spaces are close to an even split.
       return Math.round(extent.width * extent.height * 0.5);
     case 'image':
-      return countSetBits(op.bitmap);
+      return (
+        countSetBits(op.bitmap) *
+        Math.max(1, op.scaleX ?? 1) *
+        Math.max(1, op.scaleY ?? 1)
+      );
     default:
       return 0;
   }

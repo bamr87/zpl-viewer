@@ -19,6 +19,7 @@ describe('integration: activation', () => {
       'labelStudio.previewToSide',
       'labelStudio.exportPng',
       'labelStudio.exportPdf',
+      'labelStudio.exportSvg',
       'labelStudio.formatDocument',
       'labelStudio.validate',
       'labelStudio.insertTemplate',

@@ -132,12 +132,19 @@ export function getImportConfig(): {
   threshold: number;
   dither: 'none' | 'floyd-steinberg';
   maxWidthDots: number;
+  invert: boolean;
+  trim: boolean;
+  rotate: 0 | 90 | 180 | 270;
 } {
   const dither = getSetting<string>('import.dither', 'none');
+  const rotate = getSetting<number>('import.rotate', 0);
   return {
     threshold: getSetting<number>('import.threshold', 128),
     dither: dither === 'floyd-steinberg' ? 'floyd-steinberg' : 'none',
     maxWidthDots: getSetting<number>('import.maxWidthDots', 600),
+    invert: getSetting<boolean>('import.invert', false),
+    trim: getSetting<boolean>('import.trim', false),
+    rotate: rotate === 90 || rotate === 180 || rotate === 270 ? rotate : 0,
   };
 }
 

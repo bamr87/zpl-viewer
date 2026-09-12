@@ -33,6 +33,7 @@ describe('integration: Label Studio commands', () => {
       'labelStudio.previewToSide',
       'labelStudio.exportPng',
       'labelStudio.exportPdf',
+      'labelStudio.exportSvg',
       'labelStudio.formatDocument',
       'labelStudio.validate',
       'labelStudio.analyze',

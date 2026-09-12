@@ -24,3 +24,6 @@ release-please-config.json
 .gitattributes
 test-results/**
 playwright-report/**
+coverage/**
+scripts/**
+.vscode-test.mjs

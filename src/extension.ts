@@ -9,6 +9,7 @@ import { LabelPreviewManager } from './previewPanel';
 import { ALL_FORMAT_IDS, LABEL_FORMATS, isLabelFormatId } from './core/formats';
 import { registerLabelExplorer } from './ui/labelExplorer';
 import { registerCommands } from './ui/commands';
+import { registerStatusBar } from './ui/statusBar';
 import { affectsLabelStudio } from './config';
 
 /** Every label language the extension contributes providers for. */
@@ -69,6 +70,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     ...registerCommands({ context, preview, diagnostics, explorer, output }),
+    registerStatusBar(context),
   );
 
   if (process.env.VSCODE_ZPL_TEST === '1') {

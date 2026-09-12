@@ -11,3 +11,6 @@ playwright-report/
 
 # Written by the integration suite when it exercises workspace settings.
 src/test/fixtures/.vscode/
+
+# The e2e preview harness is generated from src/webview/preview.html at run time.
+src/test/e2e/harness.generated.html

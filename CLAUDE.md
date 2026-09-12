@@ -4,7 +4,7 @@ Guidance for AI coding agents (Claude Code, Copilot, Cursor) working in **zpl-vi
 
 **Label Studio** (package name `zpl-viewer`, kept for extension-identity stability) is a VS Code extension for everything that happens to a thermal label before it reaches the printer: read, create, modify, analyze, import, merge and deploy. It supports two printer languages — ZPL II (`.zpl`, `.zpl2`, `.prn`, `.lbl`) and EPL2 (`.epl`, `.epl2`) — with syntax highlighting, hover docs and IntelliSense, snippets, formatters, diagnostics, a live label preview, PNG/PDF export, a 24-symbology barcode studio, CSV/JSON data merge, PNG and printer-capture import, and deployment over raw TCP 9100, a device path or a spool folder.
 
-Everything except deployment runs fully offline and in-process: each language parses into the shared drawing-op IR (`src/renderer/ir.ts`), `src/renderer/draw.ts` renders it to Canvas 2D, and pure-JS libraries (`bwip-js` for barcodes, `pdf-lib` for PDF) do the rest. The only socket in the codebase is `src/deploy/transports.ts`, used when a user explicitly deploys. "Done" here means ESLint is clean, both webpack bundles (`dist/extension.js`, `dist/webview/`) build, and the four-layer test pipeline is green — unit, visual regression against committed golden PNGs, VS Code extension-host integration, and Playwright e2e — as run by the 3-OS CI matrix (`.github/workflows/ci.yml`, Node 20).
+Everything except deployment runs fully offline and in-process: each language parses into the shared drawing-op IR (`src/renderer/ir.ts`), `src/renderer/draw.ts` renders it to Canvas 2D, and pure-JS libraries (`bwip-js` for barcodes, `pdf-lib` for PDF) do the rest. The only socket in the codebase is `src/deploy/transports.ts`, used when a user explicitly deploys. "Done" here means ESLint is clean, both webpack bundles (`dist/extension.js`, `dist/webview/`) build, and the test pipeline is green — unit plus renderer draw-call geometry, VS Code extension-host integration, and Playwright e2e — as run by the 3-OS CI matrix (`.github/workflows/ci.yml`, Node 20).
 
 ## Stack & commands
 
@@ -15,11 +15,10 @@ npm ci                       # install dependencies (Node 20)
 npm run watch                # webpack watch for both bundles; then F5 to launch the Extension Development Host
 npm run compile              # webpack build → dist/extension.js + dist/webview/
 npm run lint                 # eslint src --ext ts
-npm run test:unit            # pure unit + renderer smoke tests (compile-tests + c8/mocha)
-npm run test:visual          # renderer visual regression vs golden PNGs (test:visual:update regenerates them)
+npm run test:unit            # pure unit + renderer draw-call tests (compile-tests + c8/mocha)
 npm run test:integration     # VS Code extension-host suite (@vscode/test-electron)
 npm run test:e2e             # Playwright webview tests (first: npx playwright install chromium)
-npm test                     # full pipeline: unit + visual + integration + e2e
+npm test                     # full pipeline: unit + integration + e2e
 ```
 
 ## Architecture rules
@@ -30,7 +29,9 @@ npm test                     # full pipeline: unit + visual + integration + e2e
 - Add a printer language by creating `src/formats/<id>/` and registering it in `src/core/formats.ts`; parse into the existing IR rather than inventing a second one.
 - `src/barcode/symbologies.ts` is the single source of truth for symbologies (encoder id, ZPL command, EPL selector, charset, length, check digit). Never hard-code a symbology mapping elsewhere.
 - Settings are read through `src/config.ts` so the legacy `zplViewer.*` keys keep working; new commands use the `labelStudio.*` namespace and keep an alias if they replace an old id.
-- Visual goldens are bound to the machine that produced them — system fonts differ per OS, and the Skia build behind `@napi-rs/canvas` differs per platform and per CI runner image, so even a text-free label's box and barcode edges move. Cover rendering geometry portably in `src/test/unit/render.test.ts` (which records Canvas 2D calls); treat the pixel goldens as a same-machine net, and never add a golden you cannot regenerate where CI runs.
+- **Never add pixel goldens.** They were tried and removed: a rendered label depends on the host's fonts and on the exact Skia build behind the canvas, so a golden can only be regenerated on the machine that made it — and the environment noise they had to tolerate hid a broken barcode encoder for as long as they existed, with the rendered error message baked into every committed image. Cover rendering by recording Canvas 2D calls instead (`src/test/helpers/recordingContext.ts`, used by `src/test/unit/render.test.ts` and `src/test/renderer/draw.test.ts`).
+- The pure layer has no `zlib` and no `Buffer`: `core/inflate.ts` and `core/base64.ts` exist so decompression and base64 work in the webview too. Reach for those, not the Node built-ins, anywhere under the pure layer.
+- Graphics decoding belongs in `src/renderer/graphics.ts` and image decoding in `src/image/`; both are registries, so a new encoding or file format is one entry plus its decoder.
 
 ## Conventions
 

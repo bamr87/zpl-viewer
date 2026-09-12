@@ -161,6 +161,14 @@ document.querySelectorAll<HTMLButtonElement>('button[data-cmd]').forEach((btn) =
     } else if (cmd === 'zoom-reset') {
       lastScale = 2;
       paint();
+    } else if (cmd === 'export-png') {
+      postToHost({ type: 'run-command', command: 'labelStudio.exportPng' });
+    } else if (cmd === 'export-pdf') {
+      postToHost({ type: 'run-command', command: 'labelStudio.exportPdf' });
+    } else if (cmd === 'export-svg') {
+      postToHost({ type: 'run-command', command: 'labelStudio.exportSvg' });
+    } else if (cmd === 'actions') {
+      postToHost({ type: 'run-command', command: 'labelStudio.showActions' });
     }
   });
 });

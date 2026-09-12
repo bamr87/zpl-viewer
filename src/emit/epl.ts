@@ -154,11 +154,48 @@ function emitImage(op: ImageOp, warnings: string[]): string {
   warnings.push(
     'Graphic field converted to `GW`; the binary payload must reach the printer verbatim.',
   );
-  let raw = '';
-  for (const byte of op.bitmap) {
-    raw += String.fromCharCode(byte);
+
+  // EPL's GW has no magnification parameter, so a magnified graphic has to be
+  // expanded into real dots before it is written.
+  const scaleX = Math.max(1, Math.round(op.scaleX ?? 1));
+  const scaleY = Math.max(1, Math.round(op.scaleY ?? 1));
+  const scaled = scaleX === 1 && scaleY === 1 ? op : scaleBitmap(op, scaleX, scaleY);
+  if (scaled !== op) {
+    warnings.push(
+      `Magnified graphic expanded to ${scaled.width}x${scaled.height} dots; EPL2 GW cannot scale.`,
+    );
   }
-  return `GW${op.x},${op.y},${op.bytesPerRow},${op.height},${raw}`;
+
+  let raw = '';
+  for (const byte of scaled.bitmap) {
+    // GW burns a dot for a 0 bit, the inverse of the IR's convention.
+    raw += String.fromCharCode(~byte & 0xff);
+  }
+  return `GW${op.x},${op.y},${scaled.bytesPerRow},${scaled.height},${raw}`;
+}
+
+/** Nearest-neighbour expansion of a 1-bit bitmap by whole-dot factors. */
+function scaleBitmap(
+  op: ImageOp,
+  scaleX: number,
+  scaleY: number,
+): { bitmap: Uint8Array; bytesPerRow: number; width: number; height: number } {
+  const width = op.width * scaleX;
+  const height = op.height * scaleY;
+  const bytesPerRow = Math.ceil(width / 8);
+  const bitmap = new Uint8Array(bytesPerRow * height);
+
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = Math.floor(y / scaleY);
+    for (let x = 0; x < width; x += 1) {
+      const sourceX = Math.floor(x / scaleX);
+      const byte = op.bitmap[sourceY * op.bytesPerRow + (sourceX >> 3)] ?? 0;
+      if ((byte >> (7 - (sourceX & 7))) & 1) {
+        bitmap[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+    }
+  }
+  return { bitmap, bytesPerRow, width, height };
 }
 
 function emitOp(op: Op, dpmm: number, warnings: string[]): string | undefined {

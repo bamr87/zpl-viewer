@@ -177,12 +177,20 @@ export interface BarcodeOp extends BaseOp {
 
 export interface ImageOp extends BaseOp {
   type: 'image';
-  /** Width of the image in dots. */
+  /** Width of the image in dots, before magnification. */
   width: number;
-  /** Height of the image in dots. */
+  /** Height of the image in dots, before magnification. */
   height: number;
   /** Raw monochrome bitmap. 1 bit per pixel, row-major. */
   bitmap: Uint8Array;
   /** Bytes per row (as declared in ^GF). */
   bytesPerRow: number;
+  /** Horizontal magnification (^XG parameter, default 1). */
+  scaleX?: number;
+  /** Vertical magnification (^XG parameter, default 1). */
+  scaleY?: number;
+  /** Print set bits as white on black (^GF reverse / ^IM inverted recall). */
+  invert?: boolean;
+  /** Name of the stored graphic this op recalls, when it came from ^XG/^IM. */
+  sourceName?: string;
 }
