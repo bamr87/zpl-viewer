@@ -7,5 +7,11 @@
 # ZPL fixtures/samples are EOL-sensitive test inputs: always LF, everywhere.
 *.zpl text eol=lf
 
+# Same for the EPL and data fixtures: tests assert exact offsets and cell
+# values, and VS Code adopts whatever EOL the file arrives with.
+*.epl text eol=lf
+*.csv text eol=lf
+*.jsonl text eol=lf
+
 # Golden images and other binaries must never be touched by EOL conversion.
 *.png binary

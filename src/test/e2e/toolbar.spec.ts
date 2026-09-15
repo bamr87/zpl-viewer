@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openHarness, postRender, readFixture } from './harness';
+import { hostMessages, openHarness, postRender, readFixture } from './harness';
 
 test('zoom toolbar changes canvas dimensions', async ({ page }) => {
   await openHarness(page);
@@ -24,4 +24,33 @@ test('zoom toolbar changes canvas dimensions', async ({ page }) => {
     .locator('#label')
     .evaluate((c) => (c as HTMLCanvasElement).width);
   expect(widthAfterZoomOut).toBeLessThan(widthAfterZoomIn);
+});
+
+test('toolbar export buttons ask the host to run the export commands', async ({
+  page,
+}) => {
+  // The preview is the one place a user is definitely looking at a label, so
+  // its toolbar runs the same commands the menus do rather than a private
+  // export path of its own.
+  await openHarness(page);
+  await postRender(page, readFixture('hello.zpl'));
+
+  for (const [button, command] of [
+    ['export-png', 'labelStudio.exportPng'],
+    ['export-pdf', 'labelStudio.exportPdf'],
+    ['export-svg', 'labelStudio.exportSvg'],
+    ['actions', 'labelStudio.showActions'],
+  ]) {
+    await page.click(`button[data-cmd="${button}"]`);
+    const messages = (await hostMessages(page)) as Array<{
+      type?: string;
+      command?: string;
+    }>;
+    expect(
+      messages.some(
+        (message) => message.type === 'run-command' && message.command === command,
+      ),
+      `clicking ${button} should request ${command}`,
+    ).toBe(true);
+  }
 });

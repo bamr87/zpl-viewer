@@ -1,33 +1,40 @@
 import * as vscode from 'vscode';
-import { formatZpl } from '../formatting';
+import { formatLabel } from '../core/pipeline';
+import { formatOfDocument, getFormatConfig } from '../config';
 
 /**
- * Formats a ZPL document:
- *   - Optionally uppercases command names.
- *   - Optionally places each command on its own line.
- *   - Indents everything between `^XA` and `^XZ` by two spaces.
+ * The edits that lay a label document out with its own language's rules:
+ *   - ZPL: optional uppercasing, one command per line, indented label bodies.
+ *   - EPL: layout only — command case is significant in EPL2.
+ *
+ * Exported so `labelStudio.formatDocument` can format the document it was
+ * handed instead of delegating to `editor.action.formatDocument`, which acts on
+ * whichever code editor has focus — none at all while the preview webview does.
  */
-export class ZplFormatter
-  implements vscode.DocumentFormattingEditProvider
-{
+export function labelFormattingEdits(
+  document: vscode.TextDocument,
+): vscode.TextEdit[] {
+  const config = getFormatConfig();
+  const original = document.getText();
+  const formatted = formatLabel(original, formatOfDocument(document), {
+    uppercaseCommands: config.uppercaseCommands,
+    oneCommandPerLine: config.oneCommandPerLine,
+  });
+  if (formatted === original) {
+    return [];
+  }
+
+  const fullRange = new vscode.Range(
+    document.positionAt(0),
+    document.positionAt(original.length),
+  );
+  return [vscode.TextEdit.replace(fullRange, formatted)];
+}
+
+export class LabelFormatter implements vscode.DocumentFormattingEditProvider {
   provideDocumentFormattingEdits(
     document: vscode.TextDocument,
   ): vscode.ProviderResult<vscode.TextEdit[]> {
-    const config = vscode.workspace.getConfiguration('zplViewer.format');
-    const uppercase = config.get<boolean>('uppercaseCommands', true);
-    const oneCommandPerLine = config.get<boolean>('oneCommandPerLine', true);
-
-    const original = document.getText();
-    const formatted = formatZpl(original, { uppercase, oneCommandPerLine });
-    if (formatted === original) {
-      return [];
-    }
-
-    const fullRange = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(original.length),
-    );
-    return [vscode.TextEdit.replace(fullRange, formatted)];
+    return labelFormattingEdits(document);
   }
 }
-

@@ -1,7 +1,7 @@
 {
   "name": "zpl-viewer",
-  "displayName": "ZPL Viewer",
-  "description": "Comprehensive language support for Zebra Programming Language (ZPL/ZPL II): syntax highlighting, IntelliSense, hover docs, snippets, live label preview, validation, and export.",
+  "displayName": "Label Studio \u2014 Labels, Barcodes & Data",
+  "description": "Read, create, analyze, import, merge and deploy thermal labels: ZPL II and EPL2 language support, live preview, a barcode studio for 24 symbologies, CSV/JSON data merge, and printer deployment \u2014 all offline.",
   "version": "0.2.0",
   "publisher": "zpl-viewer",
   "license": "MIT",
@@ -13,26 +13,24 @@
     "Snippets",
     "Formatters",
     "Linters",
-    "Visualization"
+    "Visualization",
+    "Data Science"
   ],
   "keywords": [
     "zpl",
+    "epl",
     "zebra",
     "label",
     "printer",
     "barcode",
-    "zpl2",
+    "qr",
+    "gs1",
+    "thermal",
     "labelary"
   ],
   "activationEvents": [
     "onLanguage:zpl",
-    "onCommand:zplViewer.preview",
-    "onCommand:zplViewer.previewToSide",
-    "onCommand:zplViewer.exportPng",
-    "onCommand:zplViewer.exportPdf",
-    "onCommand:zplViewer.formatDocument",
-    "onCommand:zplViewer.validate",
-    "onCommand:zplViewer.insertTemplate"
+    "onLanguage:epl"
   ],
   "main": "./dist/extension.js",
   "repository": {
@@ -59,6 +57,23 @@
           "light": "./images/file-icon.svg",
           "dark": "./images/file-icon.svg"
         }
+      },
+      {
+        "id": "epl",
+        "aliases": [
+          "EPL",
+          "EPL2",
+          "Eltron Programming Language"
+        ],
+        "extensions": [
+          ".epl",
+          ".epl2"
+        ],
+        "configuration": "./language-configuration-epl.json",
+        "icon": {
+          "light": "./images/file-icon.svg",
+          "dark": "./images/file-icon.svg"
+        }
       }
     ],
     "grammars": [
@@ -66,130 +81,603 @@
         "language": "zpl",
         "scopeName": "source.zpl",
         "path": "./syntaxes/zpl.tmLanguage.json"
+      },
+      {
+        "language": "epl",
+        "scopeName": "source.epl",
+        "path": "./syntaxes/epl.tmLanguage.json"
       }
     ],
     "snippets": [
       {
         "language": "zpl",
         "path": "./snippets/zpl.code-snippets"
+      },
+      {
+        "language": "epl",
+        "path": "./snippets/epl.code-snippets"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "labelStudio",
+          "title": "Label Studio",
+          "icon": "images/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "labelStudio": [
+        {
+          "id": "labelStudio.actionsView",
+          "name": "Actions",
+          "icon": "images/activity-icon.svg"
+        },
+        {
+          "id": "labelStudio.labelsView",
+          "name": "Labels",
+          "icon": "images/activity-icon.svg"
+        },
+        {
+          "id": "labelStudio.dataView",
+          "name": "Data sources",
+          "icon": "images/activity-icon.svg"
+        },
+        {
+          "id": "labelStudio.printersView",
+          "name": "Printers",
+          "icon": "images/activity-icon.svg"
+        },
+        {
+          "id": "labelStudio.templatesView",
+          "name": "Templates",
+          "icon": "images/activity-icon.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "labelStudio.printersView",
+        "contents": "No printers configured.\n[Add a printer](command:labelStudio.addPrinter)\nPrinters can be a network address, a device path, or a spool folder."
+      },
+      {
+        "view": "labelStudio.labelsView",
+        "contents": "No label files found in this workspace.\n[New label from template](command:labelStudio.newFromTemplate)\n[Import a printer capture](command:labelStudio.importCapture)"
+      },
+      {
+        "view": "labelStudio.dataView",
+        "contents": "No CSV, TSV or JSON data sources found in this workspace.\nAdd one, then merge it through a label to print a row per record.\n[Check data mapping](command:labelStudio.checkMapping)"
       }
     ],
     "commands": [
       {
-        "command": "zplViewer.preview",
-        "title": "ZPL: Open Label Preview",
-        "category": "ZPL",
+        "command": "labelStudio.preview",
+        "title": "Open Label Preview",
+        "category": "Label",
         "icon": "$(open-preview)"
       },
       {
-        "command": "zplViewer.previewToSide",
-        "title": "ZPL: Open Label Preview to the Side",
-        "category": "ZPL",
+        "command": "labelStudio.previewToSide",
+        "title": "Open Label Preview to the Side",
+        "category": "Label",
         "icon": "$(open-preview)"
       },
       {
-        "command": "zplViewer.refreshPreview",
-        "title": "ZPL: Refresh Preview",
-        "category": "ZPL",
+        "command": "labelStudio.refreshPreview",
+        "title": "Refresh Preview",
+        "category": "Label",
         "icon": "$(refresh)"
       },
       {
-        "command": "zplViewer.exportPng",
-        "title": "ZPL: Export Label as PNG",
-        "category": "ZPL"
+        "command": "labelStudio.exportPng",
+        "title": "Export Label as PNG",
+        "category": "Label",
+        "icon": "$(file-media)"
       },
       {
-        "command": "zplViewer.exportPdf",
-        "title": "ZPL: Export Label as PDF",
-        "category": "ZPL"
+        "command": "labelStudio.exportPdf",
+        "title": "Export Labels as PDF",
+        "category": "Label",
+        "icon": "$(file-pdf)"
       },
       {
-        "command": "zplViewer.formatDocument",
-        "title": "ZPL: Format Document",
-        "category": "ZPL"
+        "command": "labelStudio.exportSvg",
+        "title": "Export Label as SVG (vector)",
+        "category": "Label",
+        "icon": "$(symbol-color)"
       },
       {
-        "command": "zplViewer.validate",
-        "title": "ZPL: Validate Document",
-        "category": "ZPL"
+        "command": "labelStudio.formatDocument",
+        "title": "Format Label Document",
+        "category": "Label",
+        "icon": "$(list-flat)"
       },
       {
-        "command": "zplViewer.insertTemplate",
-        "title": "ZPL: Insert Label Template",
-        "category": "ZPL"
+        "command": "labelStudio.validate",
+        "title": "Validate Label",
+        "category": "Label",
+        "icon": "$(check)"
+      },
+      {
+        "command": "labelStudio.analyze",
+        "title": "Analyze Label (metrics + findings)",
+        "category": "Label",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "labelStudio.insertTemplate",
+        "title": "Insert Label Snippet",
+        "category": "Label",
+        "icon": "$(add)"
+      },
+      {
+        "command": "labelStudio.newFromTemplate",
+        "title": "New Label from Template",
+        "category": "Label",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "labelStudio.convertFormat",
+        "title": "Convert Label to Another Printer Language",
+        "category": "Label",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "labelStudio.openBarcodeStudio",
+        "title": "Open Barcode Studio",
+        "category": "Label",
+        "icon": "$(symbol-color)"
+      },
+      {
+        "command": "labelStudio.insertBarcode",
+        "title": "Insert Barcode Field",
+        "category": "Label",
+        "icon": "$(add)"
+      },
+      {
+        "command": "labelStudio.importImage",
+        "title": "Import Image as Label Graphic",
+        "category": "Label",
+        "icon": "$(file-media)"
+      },
+      {
+        "command": "labelStudio.importCapture",
+        "title": "Import Printer Capture",
+        "category": "Label",
+        "icon": "$(inbox)"
+      },
+      {
+        "command": "labelStudio.previewDataSource",
+        "title": "Preview Data Source",
+        "category": "Label",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "labelStudio.mergeData",
+        "title": "Merge Data Into Labels",
+        "category": "Label",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "labelStudio.checkMapping",
+        "title": "Check Data Mapping",
+        "category": "Label",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "labelStudio.deploy",
+        "title": "Deploy Label to Printer",
+        "category": "Label",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "labelStudio.deployDryRun",
+        "title": "Deploy Label (dry run)",
+        "category": "Label",
+        "icon": "$(debug-step-over)"
+      },
+      {
+        "command": "labelStudio.addPrinter",
+        "title": "Add Printer",
+        "category": "Label",
+        "icon": "$(add)"
+      },
+      {
+        "command": "labelStudio.refreshExplorer",
+        "title": "Refresh Label Explorer",
+        "category": "Label",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "labelStudio.showOutput",
+        "title": "Show Deployment Log",
+        "category": "Label",
+        "icon": "$(output)"
+      },
+      {
+        "command": "labelStudio.showActions",
+        "title": "Label Actions\u2026",
+        "category": "Label",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "labelStudio.editPrinter",
+        "title": "Edit Printer",
+        "category": "Label",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "labelStudio.removePrinter",
+        "title": "Remove Printer",
+        "category": "Label",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "labelStudio.setDensity",
+        "title": "Set Print Density",
+        "category": "Label",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "labelStudio.setLabelSize",
+        "title": "Set Label Size",
+        "category": "Label",
+        "icon": "$(screen-normal)"
+      },
+      {
+        "command": "labelStudio.openSettings",
+        "title": "Open Label Studio Settings",
+        "category": "Label",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "labelStudio.newFromTemplate",
+          "when": "view == labelStudio.labelsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.importCapture",
+          "when": "view == labelStudio.labelsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "labelStudio.refreshExplorer",
+          "when": "view == labelStudio.labelsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "labelStudio.refreshExplorer",
+          "when": "view == labelStudio.dataView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.addPrinter",
+          "when": "view == labelStudio.printersView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.showOutput",
+          "when": "view == labelStudio.printersView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "labelStudio.refreshExplorer",
+          "when": "view == labelStudio.printersView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "labelStudio.newFromTemplate",
+          "when": "view == labelStudio.templatesView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.showActions",
+          "when": "view == labelStudio.actionsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.openSettings",
+          "when": "view == labelStudio.actionsView",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "labelStudio.previewToSide",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "inline@3"
+        },
+        {
+          "submenu": "labelStudio.labelActions",
+          "when": "view == labelStudio.labelsView && viewItem == labelFile",
+          "group": "1_label@1"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "when": "view == labelStudio.dataView && viewItem == dataSource",
+          "group": "inline@1"
+        },
+        {
+          "command": "labelStudio.previewDataSource",
+          "when": "view == labelStudio.dataView && viewItem == dataSource",
+          "group": "labelStudio@1"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "when": "view == labelStudio.dataView && viewItem == dataSource",
+          "group": "labelStudio@2"
+        },
+        {
+          "command": "labelStudio.checkMapping",
+          "when": "view == labelStudio.dataView && viewItem == dataSource",
+          "group": "labelStudio@3"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "inline@1"
+        },
+        {
+          "command": "labelStudio.editPrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "inline@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "1_deploy@1"
+        },
+        {
+          "command": "labelStudio.deployDryRun",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "1_deploy@2"
+        },
+        {
+          "command": "labelStudio.showOutput",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "1_deploy@3"
+        },
+        {
+          "command": "labelStudio.editPrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "labelStudio.removePrinter",
+          "when": "view == labelStudio.printersView && viewItem == printer",
+          "group": "2_edit@2"
+        },
+        {
+          "command": "labelStudio.newFromTemplate",
+          "when": "view == labelStudio.templatesView && viewItem == labelTemplate",
+          "group": "inline@1"
+        }
+      ],
       "editor/title": [
         {
-          "when": "resourceLangId == zpl",
-          "command": "zplViewer.previewToSide",
-          "group": "navigation"
+          "command": "labelStudio.previewToSide",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
+          "group": "navigation@1"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
+          "group": "navigation@2"
+        },
+        {
+          "submenu": "labelStudio.labelActions",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
+          "group": "1_run@1"
         }
       ],
       "editor/context": [
         {
-          "when": "resourceLangId == zpl",
-          "command": "zplViewer.preview",
-          "group": "zpl@1"
-        },
-        {
-          "when": "resourceLangId == zpl",
-          "command": "zplViewer.formatDocument",
-          "group": "zpl@2"
+          "submenu": "labelStudio.labelActions",
+          "when": "resourceLangId == zpl || resourceLangId == epl",
+          "group": "labelStudio@1"
         }
       ],
       "explorer/context": [
         {
-          "when": "resourceLangId == zpl",
-          "command": "zplViewer.preview",
-          "group": "zpl@1"
+          "submenu": "labelStudio.labelActions",
+          "when": "resourceExtname == .zpl || resourceExtname == .zpl2 || resourceExtname == .epl || resourceExtname == .epl2 || resourceExtname == .prn || resourceExtname == .lbl",
+          "group": "labelStudio@1"
+        },
+        {
+          "command": "labelStudio.previewDataSource",
+          "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
+          "group": "labelStudio@2"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
+          "group": "labelStudio@3"
+        },
+        {
+          "command": "labelStudio.checkMapping",
+          "when": "resourceExtname == .csv || resourceExtname == .tsv || resourceExtname == .json || resourceExtname == .jsonl",
+          "group": "labelStudio@4"
+        },
+        {
+          "command": "labelStudio.importImage",
+          "when": "resourceExtname == .png || resourceExtname == .bmp",
+          "group": "labelStudio@5"
         }
       ],
       "commandPalette": [
         {
-          "command": "zplViewer.preview",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.preview",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.previewToSide",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.previewToSide",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.refreshPreview",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.refreshPreview",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.exportPng",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.exportPng",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.exportPdf",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.exportPdf",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.formatDocument",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.exportSvg",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
         },
         {
-          "command": "zplViewer.validate",
-          "when": "resourceLangId == zpl"
+          "command": "labelStudio.formatDocument",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.validate",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.insertTemplate",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.insertBarcode",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.convertFormat",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.checkMapping",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        },
+        {
+          "command": "labelStudio.deployDryRun",
+          "when": "resourceLangId == zpl || resourceLangId == epl"
+        }
+      ],
+      "labelStudio.labelActions": [
+        {
+          "command": "labelStudio.preview",
+          "group": "1_view@1"
+        },
+        {
+          "command": "labelStudio.previewToSide",
+          "group": "1_view@2"
+        },
+        {
+          "command": "labelStudio.exportPng",
+          "group": "2_export@1"
+        },
+        {
+          "command": "labelStudio.exportPdf",
+          "group": "2_export@2"
+        },
+        {
+          "command": "labelStudio.exportSvg",
+          "group": "2_export@3"
+        },
+        {
+          "command": "labelStudio.analyze",
+          "group": "3_check@1"
+        },
+        {
+          "command": "labelStudio.validate",
+          "group": "3_check@2"
+        },
+        {
+          "command": "labelStudio.formatDocument",
+          "group": "4_edit@1"
+        },
+        {
+          "command": "labelStudio.insertBarcode",
+          "group": "4_edit@2"
+        },
+        {
+          "command": "labelStudio.convertFormat",
+          "group": "4_edit@3"
+        },
+        {
+          "command": "labelStudio.mergeData",
+          "group": "5_data@1"
+        },
+        {
+          "command": "labelStudio.checkMapping",
+          "group": "5_data@2"
+        },
+        {
+          "command": "labelStudio.deploy",
+          "group": "6_deploy@1"
+        },
+        {
+          "command": "labelStudio.deployDryRun",
+          "group": "6_deploy@2"
+        }
+      ],
+      "file/newFile": [
+        {
+          "command": "labelStudio.newFromTemplate",
+          "group": "file@1"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "zplViewer.previewToSide",
+        "command": "labelStudio.previewToSide",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
-        "when": "editorLangId == zpl"
+        "when": "editorLangId == zpl || editorLangId == epl"
+      },
+      {
+        "command": "labelStudio.showActions",
+        "key": "ctrl+k l",
+        "mac": "cmd+k l",
+        "when": "editorLangId == zpl || editorLangId == epl"
       }
     ],
     "configuration": {
       "type": "object",
-      "title": "ZPL Viewer",
+      "title": "Label Studio",
       "properties": {
-        "zplViewer.renderer.density": {
+        "labelStudio.defaultFormat": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "zpl",
+            "epl"
+          ],
+          "default": "auto",
+          "description": "Printer language assumed for files that do not declare one (.prn, .lbl). `auto` sniffs the content."
+        },
+        "labelStudio.renderer.density": {
           "type": "string",
           "enum": [
             "6dpmm",
@@ -200,53 +688,268 @@
           "default": "8dpmm",
           "description": "Print density used when rendering labels. Matches the target printer's resolution."
         },
-        "zplViewer.label.widthInches": {
+        "labelStudio.label.widthInches": {
           "type": "number",
           "default": 4,
           "minimum": 0.25,
           "maximum": 15,
           "description": "Label width in inches."
         },
-        "zplViewer.label.heightInches": {
+        "labelStudio.label.heightInches": {
           "type": "number",
           "default": 6,
           "minimum": 0.25,
           "maximum": 30,
           "description": "Label height in inches."
         },
-        "zplViewer.preview.autoRefresh": {
+        "labelStudio.preview.autoRefresh": {
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh the preview as the document changes."
         },
-        "zplViewer.preview.autoRefreshDelay": {
+        "labelStudio.preview.autoRefreshDelay": {
           "type": "number",
           "default": 400,
           "minimum": 100,
           "maximum": 5000,
           "description": "Debounce delay (ms) for preview auto-refresh."
         },
-        "zplViewer.preview.initialZoom": {
+        "labelStudio.preview.initialZoom": {
           "type": "number",
           "default": 2,
           "minimum": 0.25,
           "maximum": 8,
           "description": "Initial display scale for the preview (1 = 1 dot per pixel)."
         },
-        "zplViewer.format.uppercaseCommands": {
+        "labelStudio.format.uppercaseCommands": {
           "type": "boolean",
           "default": true,
-          "description": "Uppercase ZPL commands when formatting."
+          "description": "Uppercase ZPL commands when formatting. EPL command case is significant and is never changed."
         },
-        "zplViewer.format.oneCommandPerLine": {
+        "labelStudio.format.oneCommandPerLine": {
           "type": "boolean",
           "default": true,
           "description": "Place each ZPL command on its own line when formatting."
         },
+        "labelStudio.validation.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable diagnostics for label documents."
+        },
+        "labelStudio.validation.barcodeData": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check barcode payloads against the symbology's character set, length and check digit."
+        },
+        "labelStudio.validation.bounds": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report fields that fall outside the printable area."
+        },
+        "labelStudio.validation.scannability": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report bar widths, bar heights and quiet zones that are likely to fail a scanner."
+        },
+        "labelStudio.merge.maxRows": {
+          "type": "number",
+          "default": 500,
+          "minimum": 1,
+          "maximum": 100000,
+          "description": "Maximum number of data rows expanded by a single merge."
+        },
+        "labelStudio.import.threshold": {
+          "type": "number",
+          "default": 128,
+          "minimum": 1,
+          "maximum": 254,
+          "description": "Luminance threshold (0-255) below which an imported image pixel becomes a printed dot."
+        },
+        "labelStudio.import.dither": {
+          "type": "string",
+          "enum": [
+            "none",
+            "floyd-steinberg"
+          ],
+          "default": "none",
+          "description": "Dithering applied when converting imported artwork to 1 bit per pixel. Use `none` for logos and line art."
+        },
+        "labelStudio.import.maxWidthDots": {
+          "type": "number",
+          "default": 600,
+          "minimum": 8,
+          "maximum": 4000,
+          "description": "Imported images wider than this many dots are scaled down to fit."
+        },
+        "labelStudio.import.invert": {
+          "type": "boolean",
+          "default": false,
+          "description": "Swap black and white when importing artwork. Use for light logos meant to print on a dark field."
+        },
+        "labelStudio.import.trim": {
+          "type": "boolean",
+          "default": false,
+          "description": "Crop blank margins from imported artwork so the graphic starts where the ink does."
+        },
+        "labelStudio.import.rotate": {
+          "type": "number",
+          "enum": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "default": 0,
+          "description": "Rotate imported artwork clockwise by this many degrees."
+        },
+        "labelStudio.deploy.confirmBeforeSend": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before sending a label to a printer."
+        },
+        "labelStudio.deploy.timeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 500,
+          "maximum": 120000,
+          "description": "How long to wait for a network printer before giving up."
+        },
+        "labelStudio.printers": {
+          "type": "array",
+          "default": [],
+          "description": "Printers labels can be deployed to.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name, e.g. `Warehouse ZT411`."
+              },
+              "transport": {
+                "type": "string",
+                "enum": [
+                  "tcp",
+                  "file",
+                  "directory"
+                ],
+                "default": "tcp",
+                "description": "`tcp` sends to a network printer, `file` writes to a device or share, `directory` drops a spool file."
+              },
+              "host": {
+                "type": "string",
+                "description": "Hostname or IP address (tcp transport)."
+              },
+              "port": {
+                "type": "number",
+                "default": 9100,
+                "description": "TCP port; raw printing is 9100 on virtually every printer."
+              },
+              "path": {
+                "type": "string",
+                "description": "Device path, share or spool directory (file/directory transports)."
+              },
+              "format": {
+                "type": "string",
+                "enum": [
+                  "zpl",
+                  "epl"
+                ],
+                "default": "zpl",
+                "description": "Printer language. Labels written in the other language are converted on deploy."
+              },
+              "dpmm": {
+                "type": "number",
+                "enum": [
+                  6,
+                  8,
+                  12,
+                  24
+                ],
+                "default": 8,
+                "description": "Print density in dots per millimetre."
+              },
+              "widthInches": {
+                "type": "number",
+                "description": "Stock width in inches."
+              },
+              "heightInches": {
+                "type": "number",
+                "description": "Stock height in inches."
+              },
+              "append": {
+                "type": "boolean",
+                "default": false,
+                "description": "Append to the target file instead of replacing it (file transport)."
+              },
+              "description": {
+                "type": "string",
+                "description": "Free-text note shown in the printers view."
+              }
+            }
+          }
+        },
+        "zplViewer.renderer.density": {
+          "type": "string",
+          "enum": [
+            "6dpmm",
+            "8dpmm",
+            "12dpmm",
+            "24dpmm"
+          ],
+          "default": "8dpmm",
+          "deprecationMessage": "Renamed to labelStudio.renderer.density.",
+          "description": "Deprecated: use `labelStudio.renderer.density`."
+        },
+        "zplViewer.label.widthInches": {
+          "type": "number",
+          "default": 4,
+          "deprecationMessage": "Renamed to labelStudio.label.widthInches.",
+          "description": "Deprecated: use `labelStudio.label.widthInches`."
+        },
+        "zplViewer.label.heightInches": {
+          "type": "number",
+          "default": 6,
+          "deprecationMessage": "Renamed to labelStudio.label.heightInches.",
+          "description": "Deprecated: use `labelStudio.label.heightInches`."
+        },
+        "zplViewer.preview.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "deprecationMessage": "Renamed to labelStudio.preview.autoRefresh.",
+          "description": "Deprecated: use `labelStudio.preview.autoRefresh`."
+        },
+        "zplViewer.preview.autoRefreshDelay": {
+          "type": "number",
+          "default": 400,
+          "deprecationMessage": "Renamed to labelStudio.preview.autoRefreshDelay.",
+          "description": "Deprecated: use `labelStudio.preview.autoRefreshDelay`."
+        },
+        "zplViewer.preview.initialZoom": {
+          "type": "number",
+          "default": 2,
+          "deprecationMessage": "Renamed to labelStudio.preview.initialZoom.",
+          "description": "Deprecated: use `labelStudio.preview.initialZoom`."
+        },
+        "zplViewer.format.uppercaseCommands": {
+          "type": "boolean",
+          "default": true,
+          "deprecationMessage": "Renamed to labelStudio.format.uppercaseCommands.",
+          "description": "Deprecated: use `labelStudio.format.uppercaseCommands`."
+        },
+        "zplViewer.format.oneCommandPerLine": {
+          "type": "boolean",
+          "default": true,
+          "deprecationMessage": "Renamed to labelStudio.format.oneCommandPerLine.",
+          "description": "Deprecated: use `labelStudio.format.oneCommandPerLine`."
+        },
         "zplViewer.validation.enable": {
           "type": "boolean",
           "default": true,
-          "description": "Enable diagnostics for ZPL documents."
+          "deprecationMessage": "Renamed to labelStudio.validation.enable.",
+          "description": "Deprecated: use `labelStudio.validation.enable`."
         }
       }
     },
@@ -255,8 +958,20 @@
         "editor.wordWrap": "on",
         "editor.tabSize": 2,
         "editor.insertSpaces": true
+      },
+      "[epl]": {
+        "editor.wordWrap": "off",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
       }
-    }
+    },
+    "submenus": [
+      {
+        "id": "labelStudio.labelActions",
+        "label": "Label Studio",
+        "icon": "$(tag)"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -267,26 +982,22 @@
     "watch-tests": "tsc -p ./tsconfig.test.json -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/draw.test.js\"",
-    "test:visual": "npm run compile-tests && mocha \"out/test/renderer/visual/**/*.test.js\"",
-    "test:visual:update": "cross-env UPDATE_GOLDENS=1 npm run test:visual",
+    "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/**/*.test.js\"",
     "test:integration": "npm run compile-tests && cross-env VSCODE_ZPL_TEST=1 node ./out/test/runTest.js",
     "test:e2e": "playwright test -c src/test/e2e/playwright.config.ts",
-    "test": "npm run test:unit && npm run test:visual && npm run test:integration && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:integration && npm run test:e2e"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.99",
     "@playwright/test": "^1.59.1",
     "@types/chai": "^5.2.3",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.11.0",
-    "@types/pngjs": "^6.0.5",
     "@types/sinon": "^21.0.1",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vscode/test-electron": "^2.3.9",
+    "@vscode/test-electron": "^3.1.0",
     "c8": "^11.0.0",
     "chai": "^4.5.0",
     "copy-webpack-plugin": "^14.0.0",
@@ -294,8 +1005,6 @@
     "eslint": "^8.57.0",
     "glob": "^13.0.6",
     "mocha": "^11.7.5",
-    "pixelmatch": "^7.1.0",
-    "pngjs": "^7.0.0",
     "sinon": "^21.1.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
@@ -306,5 +1015,8 @@
   "dependencies": {
     "bwip-js": "^4.10.1",
     "pdf-lib": "^1.17.1"
+  },
+  "overrides": {
+    "yargs": "^17.7.3"
   }
 }

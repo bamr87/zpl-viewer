@@ -41,10 +41,6 @@ jobs:
       - name: Unit and renderer tests
         run: npm run test:unit
 
-      - name: Visual regression tests (Linux only)
-        if: matrix.os == 'ubuntu-latest'
-        run: npm run test:visual
-
       - name: Install Playwright Chromium (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: npx playwright install --with-deps chromium

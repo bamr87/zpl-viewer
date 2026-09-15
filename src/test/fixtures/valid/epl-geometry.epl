@@ -1,0 +1,10 @@
+; Geometry + barcodes only: renders identically on every OS because no
+; system fonts are involved, which keeps the golden image portable.
+N
+q406
+Q203,24
+X10,10,3,396,193
+LO20,40,360,4
+B30,60,0,3,2,6,60,N,"LABELSTUDIO"
+b280,130,Q,m2,s3,"https://example.com"
+P1
