@@ -1,7 +1,7 @@
 /**
  * Draws an IR label page onto a Canvas 2D context. This module is isomorphic:
  * it does not touch the DOM or Node APIs and can run in either the webview or
- * a headless canvas (node-canvas / @napi-rs/canvas).
+ * a headless or recording canvas.
  */
 
 import {
@@ -17,6 +17,7 @@ import {
   Rotation,
   TextOp,
 } from './ir';
+import { glyphXScale } from './text';
 
 /** Minimal bwip-js toCanvas-ish contract used by the renderer. */
 export interface BarcodeRenderer {
@@ -116,12 +117,9 @@ function drawText(
   ctx.font = `${height}px ${fontFamily}`;
   ctx.textBaseline = 'top';
 
-  // ZPL width != CSS font width. We simulate by horizontally scaling the glyphs
-  // so the aspect ratio matches roughly. For typical sans-serif, natural ratio
-  // is ~0.55 em, so we scale to achieve width/height relative to that.
-  const targetAspect = op.fontWidth / op.fontHeight;
-  const naturalAspect = 0.55;
-  const xScale = targetAspect / naturalAspect;
+  // ZPL width != CSS font width; `glyphXScale` bridges the two, and is shared
+  // with the SVG exporter so every output agrees on how wide text is.
+  const xScale = glyphXScale(op);
 
   ctx.save();
   ctx.scale(xScale, 1);
@@ -294,24 +292,52 @@ function drawBarcode(
   }
 }
 
+/**
+ * Paints a 1-bit-per-pixel bitmap as runs of filled rectangles.
+ *
+ * The obvious implementation — build an ImageData and `putImageData` — cannot
+ * be used here: `putImageData` writes device pixels and ignores the current
+ * transform, so a graphic would land at the canvas origin with the label's home
+ * offset, field rotation and preview zoom all thrown away. Filling one rect per
+ * horizontal run of set pixels goes through the transform like every other op,
+ * and on the sparse artwork labels actually carry it is a handful of rects per
+ * row rather than one per dot.
+ */
 function drawImage(ctx: CanvasRenderingContext2D, op: ImageOp): void {
-  const imageData = ctx.createImageData(op.width, op.height);
-  const data = imageData.data;
+  const scaleX = op.scaleX && op.scaleX > 0 ? op.scaleX : 1;
+  const scaleY = op.scaleY && op.scaleY > 0 ? op.scaleY : 1;
+  const inverted = op.invert ?? op.reverse;
+
+  if (inverted) {
+    // Reverse print: the graphic's bounding box goes black and set bits punch
+    // back out to white.
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, op.width * scaleX, op.height * scaleY);
+  }
+  ctx.fillStyle = inverted ? '#ffffff' : '#000000';
+
   for (let row = 0; row < op.height; row += 1) {
-    for (let col = 0; col < op.width; col += 1) {
-      const byteIndex = row * op.bytesPerRow + (col >> 3);
-      const bit = 7 - (col & 7);
-      const byte = op.bitmap[byteIndex] ?? 0;
-      const on = (byte >> bit) & 1;
-      const pixel = (row * op.width + col) * 4;
-      const value = on ? 0 : 255;
-      data[pixel] = value;
-      data[pixel + 1] = value;
-      data[pixel + 2] = value;
-      data[pixel + 3] = 255;
+    const rowStart = row * op.bytesPerRow;
+    let runStart = -1;
+    for (let col = 0; col <= op.width; col += 1) {
+      let on = false;
+      if (col < op.width) {
+        const byte = op.bitmap[rowStart + (col >> 3)] ?? 0;
+        on = ((byte >> (7 - (col & 7))) & 1) === 1;
+      }
+      if (on && runStart < 0) {
+        runStart = col;
+      } else if (!on && runStart >= 0) {
+        ctx.fillRect(
+          runStart * scaleX,
+          row * scaleY,
+          (col - runStart) * scaleX,
+          scaleY,
+        );
+        runStart = -1;
+      }
     }
   }
-  ctx.putImageData(imageData, 0, 0);
 }
 
 export function totalPages(pages: LabelPage[]): number {

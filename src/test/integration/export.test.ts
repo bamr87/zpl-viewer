@@ -40,4 +40,32 @@ describe('integration: export commands', () => {
     expect(png.subarray(0, 4).toString('hex')).to.equal('89504e47');
     expect(pdf.subarray(0, 4).toString()).to.equal('%PDF');
   });
+
+  it('exports SVG without a preview panel being open', async () => {
+    // The point of the SVG exporter is that it renders in the extension host:
+    // no webview, no canvas, nothing to rasterize.
+    //
+    // The label is written here rather than taken from the shared fixture
+    // workspace, whose buffers earlier tests have already edited.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'zpl-viewer-test-'));
+    const labelPath = path.join(dir, 'svg-export.zpl');
+    fs.writeFileSync(
+      labelPath,
+      '^XA\n^CF0,40\n^FO50,50^FDSVG EXPORT^FS\n^FO50,120^BY3^BCN,100,Y,N,N^FD9876543210^FS\n^XZ\n',
+    );
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(labelPath));
+    await vscode.window.showTextDocument(document);
+
+    const svgUri = vscode.Uri.file(path.join(dir, 'out.svg'));
+    saveDialogStub = sinon.stub(vscode.window, 'showSaveDialog').resolves(svgUri);
+
+    await vscode.commands.executeCommand('labelStudio.exportSvg');
+
+    const svg = fs.readFileSync(svgUri.fsPath, 'utf8');
+    expect(svg).to.contain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(svg).to.contain('SVG EXPORT');
+    // The barcode is encoded as vector paths, not a raster fallback.
+    expect(svg).to.contain('<path');
+    expect(svg).to.not.contain('barcode error');
+  });
 });

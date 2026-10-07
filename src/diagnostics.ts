@@ -1,20 +1,27 @@
 import * as vscode from 'vscode';
 import { validateZpl } from './validation';
+import { LabelDiagnostic } from './core/diagnostics';
+import { validateLabelSource } from './core/validate';
+import {
+  formatOfDocument,
+  getRenderConfig,
+  getValidationConfig,
+} from './config';
+import { isLabelFormatId } from './core/formats';
 
 export { validateZpl };
 
 /**
- * Validates a ZPL document and produces diagnostics:
- *   - Unknown commands
- *   - Missing `^XA` or `^XZ`
- *   - Unclosed `^FD` (no `^FS` before label end)
- *   - Wrong parameter counts (best-effort heuristic)
+ * Validates open label documents and publishes diagnostics:
+ *   - Syntax: unknown commands, unbalanced label envelopes, parameter counts.
+ *   - Semantics: barcode payloads that cannot encode, fields off the label,
+ *     bar widths and quiet zones too small to scan.
  */
-export class ZplDiagnostics {
+export class LabelDiagnostics {
   private readonly collection: vscode.DiagnosticCollection;
 
   constructor() {
-    this.collection = vscode.languages.createDiagnosticCollection('zpl');
+    this.collection = vscode.languages.createDiagnosticCollection('labelStudio');
   }
 
   dispose(): void {
@@ -22,17 +29,21 @@ export class ZplDiagnostics {
   }
 
   refresh(document: vscode.TextDocument): void {
-    if (document.languageId !== 'zpl') {
+    if (!isLabelFormatId(document.languageId)) {
       return;
     }
-    const enabled = vscode.workspace
-      .getConfiguration('zplViewer.validation')
-      .get<boolean>('enable', true);
-    if (!enabled) {
+    const config = getValidationConfig();
+    if (!config.enable) {
       this.collection.set(document.uri, []);
       return;
     }
     this.collection.set(document.uri, this.validate(document));
+  }
+
+  refreshAll(): void {
+    for (const document of vscode.workspace.textDocuments) {
+      this.refresh(document);
+    }
   }
 
   clear(document: vscode.TextDocument): void {
@@ -40,19 +51,54 @@ export class ZplDiagnostics {
   }
 
   private validate(document: vscode.TextDocument): vscode.Diagnostic[] {
-    const results = validateZpl(document.getText());
-    return results.map((entry) => {
-      const range = new vscode.Range(
-        document.positionAt(entry.start),
-        document.positionAt(entry.end),
-      );
-      return new vscode.Diagnostic(
-        range,
-        entry.message,
-        entry.severity === 'warning'
-          ? vscode.DiagnosticSeverity.Warning
-          : vscode.DiagnosticSeverity.Information,
-      );
+    const config = getValidationConfig();
+    const render = getRenderConfig();
+    const results = validateLabelSource(document.getText(), {
+      format: formatOfDocument(document),
+      fileName: document.fileName,
+      dpmm: render.dpmm,
+      widthInches: render.widthInches,
+      heightInches: render.heightInches,
+      lint: {
+        barcodeData: config.barcodeData,
+        bounds: config.bounds,
+        scannability: config.scannability,
+      },
     });
+    return results.map((entry) => toVsCodeDiagnostic(document, entry));
   }
 }
+
+function toVsCodeDiagnostic(
+  document: vscode.TextDocument,
+  entry: LabelDiagnostic,
+): vscode.Diagnostic {
+  const range = new vscode.Range(
+    document.positionAt(entry.start),
+    document.positionAt(entry.end),
+  );
+  const diagnostic = new vscode.Diagnostic(
+    range,
+    entry.message,
+    severityOf(entry.severity),
+  );
+  diagnostic.source = 'Label Studio';
+  if (entry.rule) {
+    diagnostic.code = entry.rule;
+  }
+  return diagnostic;
+}
+
+function severityOf(
+  severity: LabelDiagnostic['severity'],
+): vscode.DiagnosticSeverity {
+  switch (severity) {
+    case 'error':
+      return vscode.DiagnosticSeverity.Error;
+    case 'warning':
+      return vscode.DiagnosticSeverity.Warning;
+    default:
+      return vscode.DiagnosticSeverity.Information;
+  }
+}
+

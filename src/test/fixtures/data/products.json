@@ -1,0 +1,4 @@
+[
+  { "sku": "WD-001-RED", "name": "Widget Deluxe Red", "price": "$19.99", "location": { "aisle": "A", "bin": "7" } },
+  { "sku": "GZ-220", "name": "Gizmo Standard", "price": "$7.50", "location": { "aisle": "B", "bin": "12" } }
+]

@@ -1,13 +1,22 @@
 import * as vscode from 'vscode';
 import { tokenize } from '../zplParser';
+import { tokenizeEpl } from '../formats/epl/tokenizer';
+import { formatOfDocument } from '../config';
 
 /**
- * Folds each `^XA` … `^XZ` label into a collapsible block.
+ * Folds each label into a collapsible block: `^XA` … `^XZ` in ZPL, and
+ * `N` … `P` in EPL.
  */
-export class ZplFoldingProvider implements vscode.FoldingRangeProvider {
+export class LabelFoldingProvider implements vscode.FoldingRangeProvider {
   provideFoldingRanges(
     document: vscode.TextDocument,
   ): vscode.ProviderResult<vscode.FoldingRange[]> {
+    return formatOfDocument(document) === 'epl'
+      ? this.foldEpl(document)
+      : this.foldZpl(document);
+  }
+
+  private foldZpl(document: vscode.TextDocument): vscode.FoldingRange[] {
     const tokens = tokenize(document.getText());
     const ranges: vscode.FoldingRange[] = [];
     const stack: number[] = [];
@@ -31,4 +40,29 @@ export class ZplFoldingProvider implements vscode.FoldingRangeProvider {
     }
     return ranges;
   }
+
+  private foldEpl(document: vscode.TextDocument): vscode.FoldingRange[] {
+    const tokens = tokenizeEpl(document.getText());
+    const ranges: vscode.FoldingRange[] = [];
+    let startLine: number | undefined;
+
+    for (const token of tokens) {
+      if (token.name === 'N' && startLine === undefined) {
+        startLine = token.line;
+      } else if (token.name === 'P' && startLine !== undefined) {
+        if (token.line > startLine) {
+          ranges.push(
+            new vscode.FoldingRange(
+              startLine,
+              token.line,
+              vscode.FoldingRangeKind.Region,
+            ),
+          );
+        }
+        startLine = undefined;
+      }
+    }
+    return ranges;
+  }
 }
+

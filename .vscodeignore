@@ -13,3 +13,17 @@ tsconfig.json
 node_modules/**
 .github/**
 samples/**
+tsconfig.test.json
+tsconfig.webview.json
+tools/**
+CLAUDE.md
+RELEASING.md
+release-please-config.json
+.release-please-manifest.json
+.editorconfig
+.gitattributes
+test-results/**
+playwright-report/**
+coverage/**
+scripts/**
+.vscode-test.mjs

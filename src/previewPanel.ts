@@ -1,5 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { isLabelFormatId } from './core/formats';
+import {
+  affectsLabelStudio,
+  formatOfDocument,
+  getPreviewConfig,
+  getRenderConfig,
+} from './config';
+
+export { getRenderConfig };
 
 function generateNonce(): string {
   const chars =
@@ -18,13 +27,13 @@ function generateNonce(): string {
  *   - Pushes the current document text (+ render options) to the webview.
  *   - Forwards export requests to the webview and writes the returned bytes.
  */
-export class ZplPreviewManager {
-  private readonly panels = new Map<string, ZplPreviewPanel>();
+export class LabelPreviewManager {
+  private readonly panels = new Map<string, LabelPreviewPanel>();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly output: vscode.OutputChannel;
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    this.output = vscode.window.createOutputChannel('ZPL Viewer');
+    this.output = vscode.window.createOutputChannel('Label Studio');
     this.disposables.push(this.output);
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument((e) => this.onDocumentChanged(e)),
@@ -35,7 +44,7 @@ export class ZplPreviewManager {
         }
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('zplViewer')) {
+        if (affectsLabelStudio(e)) {
           for (const panel of this.panels.values()) {
             void panel.refresh();
           }
@@ -63,7 +72,7 @@ export class ZplPreviewManager {
       void existing.refresh();
       return;
     }
-    const panel = new ZplPreviewPanel(
+    const panel = new LabelPreviewPanel(
       this.context,
       document,
       viewColumn,
@@ -98,7 +107,7 @@ export class ZplPreviewManager {
     const key = document.uri.toString();
     let panel = this.panels.get(key);
     if (!panel) {
-      panel = new ZplPreviewPanel(
+      panel = new LabelPreviewPanel(
         this.context,
         document,
         vscode.ViewColumn.Beside,
@@ -135,40 +144,22 @@ export class ZplPreviewManager {
   }
 
   private onDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-    if (e.document.languageId !== 'zpl') {
+    if (!isLabelFormatId(e.document.languageId)) {
       return;
     }
     const panel = this.panels.get(e.document.uri.toString());
     if (!panel) {
       return;
     }
-    const cfg = vscode.workspace.getConfiguration('zplViewer.preview');
-    if (!cfg.get<boolean>('autoRefresh', true)) {
+    const preview = getPreviewConfig();
+    if (!preview.autoRefresh) {
       return;
     }
-    const delay = cfg.get<number>('autoRefreshDelay', 400);
-    panel.scheduleRefresh(delay);
+    panel.scheduleRefresh(preview.autoRefreshDelay);
   }
 }
 
-export function getRenderConfig(): {
-  dpmm: number;
-  widthInches: number;
-  heightInches: number;
-  scale: number;
-} {
-  const cfg = vscode.workspace.getConfiguration('zplViewer');
-  const density = cfg.get<string>('renderer.density', '8dpmm');
-  const dpmm = parseInt(density, 10) || 8;
-  return {
-    dpmm,
-    widthInches: cfg.get<number>('label.widthInches', 4),
-    heightInches: cfg.get<number>('label.heightInches', 6),
-    scale: cfg.get<number>('preview.initialZoom', 2),
-  };
-}
-
-class ZplPreviewPanel {
+class LabelPreviewPanel {
   private readonly panel: vscode.WebviewPanel;
   private refreshTimer: NodeJS.Timeout | undefined;
   private pageIndex = 0;
@@ -188,7 +179,7 @@ class ZplPreviewPanel {
     private readonly onDispose: () => void,
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'zplViewer.preview',
+      'labelStudio.preview',
       `Preview: ${this.shortName()}`,
       { viewColumn: column, preserveFocus: true },
       {
@@ -271,6 +262,7 @@ class ZplPreviewPanel {
     this.panel.webview.postMessage({
       type: 'render',
       source: this.document.getText(),
+      format: formatOfDocument(this.document),
       options: cfg,
       pageIndex: this.pageIndex,
     });
@@ -292,6 +284,7 @@ class ZplPreviewPanel {
     this.panel.webview.postMessage({
       type: 'export',
       format,
+      labelFormat: formatOfDocument(this.document),
       requestId,
       source: this.document.getText(),
       options: {
@@ -311,8 +304,22 @@ class ZplPreviewPanel {
     level?: string;
     message?: string;
     detail?: string;
+    command?: string;
   }): void {
     switch (msg.type) {
+      case 'run-command': {
+        // The preview's toolbar runs host commands, so the buttons there stay
+        // the same actions as the menus — and it passes its own document, since
+        // clicking inside a webview leaves no active text editor to fall back
+        // to.
+        const command = msg.command ?? '';
+        if (!command.startsWith('labelStudio.')) {
+          this.output.appendLine(`[preview] refused to run "${command}"`);
+          break;
+        }
+        void vscode.commands.executeCommand(command, this.document.uri);
+        break;
+      }
       case 'ready':
         this.isReady = true;
         this.output.appendLine('[preview] webview ready');
@@ -391,6 +398,7 @@ class ZplPreviewPanel {
 
   private shortName(): string {
     const parts = this.document.uri.path.split('/');
-    return parts[parts.length - 1] || 'ZPL';
+    return parts[parts.length - 1] || 'Label';
   }
 }
+

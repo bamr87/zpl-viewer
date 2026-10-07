@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Barcode Studio Harness</title>
+</head>
+<body>
+  <select id="symbology"></select>
+  <textarea id="data"></textarea>
+  <input id="moduleWidth" type="number" value="2" />
+  <input id="height" type="number" value="80" />
+  <input id="magnification" type="number" value="5" />
+  <select id="ecc">
+    <option value="L">L</option>
+    <option value="M">M</option>
+    <option value="Q" selected>Q</option>
+    <option value="H">H</option>
+  </select>
+  <select id="hri">
+    <option value="yes" selected>Show</option>
+    <option value="no">Hide</option>
+  </select>
+  <select id="target">
+    <option value="zpl">ZPL</option>
+    <option value="epl">EPL2</option>
+  </select>
+  <div id="doc"></div>
+  <div id="issues"></div>
+  <pre id="snippet">-</pre>
+  <canvas id="barcode" width="1" height="1"></canvas>
+  <button id="insert">Insert</button>
+  <button id="copy">Copy</button>
+  <button id="export">Export</button>
+
+  <script>
+    window.__hostMessages = [];
+    window.acquireVsCodeApi = function () {
+      return {
+        postMessage(msg) {
+          window.__hostMessages.push(msg);
+        },
+        setState() {},
+        getState() { return undefined; },
+      };
+    };
+  </script>
+  <script src="../../../dist/webview/studio.js"></script>
+</body>
+</html>

@@ -6,6 +6,15 @@
  */
 
 import { tokenize, ZplToken } from '../zplParser';
+import { symbologyForZplCommand } from '../barcode/symbologies';
+import {
+  decodeGraphicData,
+  GraphicStore,
+  normalizeGraphicName,
+  StoredGraphic,
+} from './graphics';
+import { decodeImage, isSupportedImage } from '../image/decode';
+import { toMonochrome } from '../image/bitmap';
 import {
   BarcodeOp,
   BoxOp,
@@ -72,6 +81,9 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
   const warnings: string[] = [];
   const pages: LabelPage[] = [];
   const tokens = tokenize(source);
+  // Downloaded graphics live in printer memory, so the store outlives the
+  // individual `^XA … ^XZ` labels that recall them.
+  const graphics: GraphicStore = new Map();
 
   let currentPage: LabelPage | undefined;
   let state: State = freshState();
@@ -87,12 +99,16 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
     };
   };
 
-  const finishField = (): void => {
+  const finishField = (endToken?: ZplToken): void => {
     if (!currentPage || !state.field) {
       return;
     }
     const f = state.field;
     const rotation = f.rotation;
+    const source = {
+      start: f.startToken.start,
+      end: endToken?.end ?? f.startToken.end,
+    };
 
     if (f.image) {
       currentPage.ops.push({
@@ -101,6 +117,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         y: f.y,
         rotation,
         reverse: f.reverse,
+        source,
       });
       state.field = undefined;
       return;
@@ -124,6 +141,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         y: f.y,
         rotation,
         reverse: f.reverse,
+        source,
       };
       currentPage.ops.push(bc);
       state.field = undefined;
@@ -148,6 +166,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         rotation,
         reverse: f.reverse,
         block: f.block,
+        source,
       };
       currentPage.ops.push(op);
       state.field = undefined;
@@ -233,7 +252,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         break;
       }
       case '^FS':
-        finishField();
+        finishField(token);
         break;
       case '^CF': {
         state.defaultFont = (token.args[0] ?? '0').toUpperCase() || '0';
@@ -245,18 +264,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         state.barModuleWidth = intArg(token, 0, state.barModuleWidth);
         state.barRatio = floatArg(token, 1, state.barRatio);
         state.barHeight = intArg(token, 2, state.barHeight);
-        break;
-      }
-      case '^BC': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'code128',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-          interpretationAbove: boolArg(token, 3, false),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
         break;
       }
       case '^BQ': {
@@ -282,51 +289,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         applyBarcodeRotation(state.field!, token, 0);
         break;
       }
-      case '^B3': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'code39',
-          ...state.field!.barcode,
-          height: intArg(token, 2, state.barHeight),
-          interpretation: boolArg(token, 3, true),
-          interpretationAbove: boolArg(token, 4, false),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^BE': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'ean13',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^BU': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'upca',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
-      case '^B8': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'ean8',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
       case '^B7': {
         ensureField(state, token);
         state.field!.barcode = {
@@ -340,17 +302,6 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         applyBarcodeRotation(state.field!, token, 0);
         break;
       }
-      case '^B9': {
-        ensureField(state, token);
-        state.field!.barcode = {
-          symbology: 'codabar',
-          ...state.field!.barcode,
-          height: intArg(token, 1, state.barHeight),
-          interpretation: boolArg(token, 2, true),
-        };
-        applyBarcodeRotation(state.field!, token, 0);
-        break;
-      }
       case '^GB': {
         ensureField(state, token);
         const w = intArg(token, 0, 1);
@@ -358,7 +309,10 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         const thickness = intArg(token, 2, 1);
         const color = colorArg(token, 3, 'B');
         const rounding = intArg(token, 4, 0);
-        currentPage?.ops.push(boxOrLine(state.field!, w, h, thickness, color, rounding));
+        currentPage?.ops.push({
+          ...boxOrLine(state.field!, w, h, thickness, color, rounding),
+          source: { start: state.field!.startToken.start, end: token.end },
+        });
         // ^GB consumes the field without waiting for ^FD, so close it now.
         state.field = undefined;
         break;
@@ -374,6 +328,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -392,6 +347,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -409,6 +365,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
           y: state.field!.y,
           rotation: state.field!.rotation,
           reverse: state.field!.reverse,
+          source: { start: state.field!.startToken.start, end: token.end },
         };
         currentPage?.ops.push(op);
         state.field = undefined;
@@ -416,7 +373,7 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
       }
       case '^GF': {
         ensureField(state, token);
-        const image = parseGraphicField(token);
+        const image = parseGraphicField(token, warnings);
         if (image) {
           state.field!.image = image;
         } else {
@@ -424,7 +381,66 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
         }
         break;
       }
+      case '~DG':
+      case '~DY': {
+        const stored = parseDownloadGraphic(token, warnings);
+        if (stored) {
+          graphics.set(stored.name, stored);
+        }
+        break;
+      }
+      case '^ID': {
+        // Delete object from storage. Wildcards delete everything matching.
+        const target = normalizeGraphicName(token.args[0] ?? '');
+        if (target === '' || target.includes('*')) {
+          graphics.clear();
+        } else {
+          graphics.delete(target);
+        }
+        break;
+      }
+      case '^XG':
+      case '^IM': {
+        ensureField(state, token);
+        const name = normalizeGraphicName(token.args[0] ?? '');
+        const stored = graphics.get(name);
+        if (!stored) {
+          warnings.push(
+            `${token.command} refers to graphic "${token.args[0] ?? ''}", which was never downloaded in this file.`,
+          );
+          state.field = undefined;
+          break;
+        }
+        // ^XG magnifies (1-10); ^IM always places the graphic at 1:1.
+        const scaleX = token.command === '^XG' ? clampMagnification(intArg(token, 1, 1)) : 1;
+        const scaleY = token.command === '^XG' ? clampMagnification(intArg(token, 2, 1)) : 1;
+        const op: ImageOp = {
+          type: 'image',
+          x: state.field!.x,
+          y: state.field!.y,
+          rotation: state.field!.rotation,
+          reverse: state.field!.reverse,
+          width: stored.bytesPerRow * 8,
+          height: stored.rows,
+          bitmap: stored.bytes,
+          bytesPerRow: stored.bytesPerRow,
+          scaleX,
+          scaleY,
+          sourceName: stored.name,
+          source: { start: state.field!.startToken.start, end: token.end },
+        };
+        currentPage?.ops.push(op);
+        // Both commands draw immediately; a trailing ^FS is optional.
+        state.field = undefined;
+        break;
+      }
       default: {
+        const layout = ZPL_BARCODE_LAYOUTS[token.command];
+        if (layout) {
+          ensureField(state, token);
+          applyBarcodeLayout(state, token, layout);
+          break;
+        }
         // ^A commands (font selection) have the format ^A[font][rotation],[h],[w]
         // where [font] and [rotation] are single letters embedded in the token name.
         if (token.command.startsWith('^A') && token.command.length >= 2) {
@@ -525,6 +541,87 @@ function boxOrLine(
   };
 }
 
+/**
+ * Argument layout of every linear/postal ZPL barcode command. ZPL puts the
+ * same conceptual parameter at a different index per command, so the index of
+ * each one is declared here rather than repeated in a dozen switch arms. The
+ * symbology itself comes from the shared barcode catalog, which also drives
+ * validation, emission and the bwip-js renderer.
+ *
+ * `^BQ` (QR), `^BX` (Data Matrix) and `^B7` (PDF417) keep dedicated handling
+ * above: their parameters are 2-D specific rather than height/interpretation.
+ */
+interface ZplBarcodeLayout {
+  command: string;
+  height?: number;
+  interpretation?: number;
+  interpretationAbove?: number;
+  magnification?: number;
+}
+
+const ZPL_BARCODE_LAYOUTS: Record<string, ZplBarcodeLayout> = {
+  // orientation, height, interpretation line, line above
+  '^BC': { command: '^BC', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BA': { command: '^BA', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B2': { command: '^B2', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BI': { command: '^BI', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BJ': { command: '^BJ', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BE': { command: '^BE', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B8': { command: '^B8', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BU': { command: '^BU', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B9': { command: '^B9', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BZ': { command: '^BZ', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^B5': { command: '^B5', height: 1, interpretation: 2, interpretationAbove: 3 },
+  '^BF': { command: '^BF', height: 1 },
+  // orientation, check digit, height, interpretation line, line above
+  '^B3': { command: '^B3', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^B1': { command: '^B1', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BK': { command: '^BK', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BM': { command: '^BM', height: 2, interpretation: 3, interpretationAbove: 4 },
+  '^BP': { command: '^BP', height: 2, interpretation: 3, interpretationAbove: 4 },
+  // orientation, symbology type, magnification, separator height, height
+  '^BR': { command: '^BR', magnification: 2, height: 4 },
+  // orientation, magnification
+  '^BO': { command: '^BO', magnification: 1 },
+  // mode, symbol number, total symbols - no orientation argument
+  '^BD': { command: '^BD' },
+};
+
+function applyBarcodeLayout(
+  state: State,
+  token: ZplToken,
+  layout: ZplBarcodeLayout,
+): void {
+  const field = state.field;
+  if (!field) {
+    return;
+  }
+  const spec = symbologyForZplCommand(layout.command);
+  field.barcode = {
+    symbology: spec?.id ?? 'code128',
+    ...field.barcode,
+    height:
+      layout.height === undefined
+        ? state.barHeight
+        : intArg(token, layout.height, state.barHeight),
+    interpretation:
+      layout.interpretation === undefined
+        ? false
+        : boolArg(token, layout.interpretation, true),
+    interpretationAbove:
+      layout.interpretationAbove === undefined
+        ? false
+        : boolArg(token, layout.interpretationAbove, false),
+    magnification:
+      layout.magnification === undefined
+        ? undefined
+        : intArg(token, layout.magnification, 2),
+  };
+  if (layout.command !== '^BD') {
+    applyBarcodeRotation(field, token, 0);
+  }
+}
+
 function applyBarcodeRotation(
   field: PendingField,
   token: ZplToken,
@@ -589,69 +686,154 @@ function decodeFieldData(raw: string, hexMode: boolean): string {
   );
 }
 
+function clampMagnification(value: number): number {
+  if (!Number.isFinite(value) || value < 1) {
+    return 1;
+  }
+  return Math.min(10, Math.floor(value));
+}
+
 /**
- * Parses a `^GF` graphic field. ZPL format:
+ * Parses a `^GF` graphic field:
  *   ^GFa,b,c,d,data
- *     a = compression type: A (ASCII hex), B (binary), C (compressed ASCII hex)
+ *     a = compression: A (ASCII hex, optionally ACS-compressed), B (binary),
+ *         C (compressed ASCII hex — identical to A for decoding purposes)
  *     b = binary byte count
  *     c = graphic field count (total bytes)
  *     d = bytes per row
- *     data = ASCII hex or binary blob
- *
- * This implementation supports the most common "A" (ASCII hex) form; other
- * compressions are left for future work but won't crash.
+ *     data = hex, binary, or a `:B64:`/`:Z64:` wrapper
  */
-function parseGraphicField(token: ZplToken): ImageOp | undefined {
+function parseGraphicField(
+  token: ZplToken,
+  warnings: string[],
+): ImageOp | undefined {
   if (token.args.length < 5) {
     return undefined;
   }
-  const compression = (token.args[0] ?? 'A').toUpperCase();
   const bytesPerRow = parseInt(token.args[3] ?? '0', 10);
+  // The payload may itself contain commas (ACS rows always do), so everything
+  // past the four header parameters is data.
   const data = token.args.slice(4).join(',');
   if (!bytesPerRow || !data) {
     return undefined;
   }
-  let bytes: Uint8Array | undefined;
-  if (compression === 'A') {
-    bytes = hexToBytes(data.replace(/[^0-9A-Fa-f:,]/g, ''));
-  } else if (compression === 'B') {
-    const buf = new Uint8Array(data.length);
-    for (let i = 0; i < data.length; i += 1) {
-      buf[i] = data.charCodeAt(i) & 0xff;
-    }
-    bytes = buf;
-  }
-  if (!bytes) {
-    return undefined;
-  }
-  const totalBytes = bytes.length;
-  const rows = Math.max(1, Math.floor(totalBytes / bytesPerRow));
+
+  const decoded = decodeGraphicData({
+    compression: token.args[0] ?? 'A',
+    data,
+    bytesPerRow,
+    totalBytes: parseInt(token.args[2] ?? '0', 10) || undefined,
+  });
+  warnings.push(...decoded.warnings);
+
   return {
     type: 'image',
     x: 0,
     y: 0,
     rotation: 'N',
     reverse: false,
-    width: bytesPerRow * 8,
-    height: rows,
-    bitmap: bytes,
-    bytesPerRow,
+    width: decoded.bytesPerRow * 8,
+    height: decoded.rows,
+    bitmap: decoded.bytes,
+    bytesPerRow: decoded.bytesPerRow,
   };
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  // Support Labelary-style run-length encoding using `:` to repeat last byte.
-  const clean = hex.replace(/\s+/g, '');
-  const out: number[] = [];
-  for (let i = 0; i < clean.length; i += 2) {
-    const pair = clean.slice(i, i + 2);
-    if (pair.length < 2) {
-      break;
-    }
-    const n = parseInt(pair, 16);
-    if (!Number.isNaN(n)) {
-      out.push(n);
-    }
+/**
+ * Parses `~DG` and `~DY`, which download a graphic into printer memory for a
+ * later `^XG` / `^IM` to draw.
+ *
+ *   ~DGd:o.x,t,w,data     — always a raw .GRF bitmap
+ *   ~DYd:f,b,x,t,w,data   — `x` names the stored format, so the payload may be
+ *                           a .GRF bitmap or a whole PNG file
+ */
+function parseDownloadGraphic(
+  token: ZplToken,
+  warnings: string[],
+): StoredGraphic | undefined {
+  const rawName = token.args[0] ?? '';
+  const name = normalizeGraphicName(rawName);
+  if (!name) {
+    return undefined;
   }
-  return new Uint8Array(out);
+
+  if (token.command === '~DG') {
+    const totalBytes = parseInt(token.args[1] ?? '0', 10) || 0;
+    const bytesPerRow = parseInt(token.args[2] ?? '0', 10) || 0;
+    if (!bytesPerRow) {
+      warnings.push(`~DG${rawName} declares no bytes per row; skipping it.`);
+      return undefined;
+    }
+    const decoded = decodeGraphicData({
+      compression: 'A',
+      data: token.args.slice(3).join(','),
+      bytesPerRow,
+      totalBytes,
+    });
+    warnings.push(...decoded.warnings);
+    return {
+      name,
+      bytes: decoded.bytes,
+      bytesPerRow: decoded.bytesPerRow,
+      rows: decoded.rows,
+    };
+  }
+
+  const storedFormat = (token.args[2] ?? 'G').toUpperCase();
+  const totalBytes = parseInt(token.args[3] ?? '0', 10) || 0;
+  const bytesPerRow = parseInt(token.args[4] ?? '0', 10) || 0;
+  const payload = token.args.slice(5).join(',');
+
+  if (storedFormat === 'G' || storedFormat === 'B') {
+    if (!bytesPerRow) {
+      warnings.push(`~DY${rawName} declares no bytes per row; skipping it.`);
+      return undefined;
+    }
+    const decoded = decodeGraphicData({
+      compression: token.args[1] ?? 'A',
+      data: payload,
+      bytesPerRow,
+      totalBytes,
+    });
+    warnings.push(...decoded.warnings);
+    return {
+      name,
+      bytes: decoded.bytes,
+      bytesPerRow: decoded.bytesPerRow,
+      rows: decoded.rows,
+    };
+  }
+
+  // A stored image file — PNG on every printer that accepts one. The bytes
+  // arrive through the same B64/Z64/hex envelope as a bitmap would, so unwrap
+  // the envelope first and hand the file itself to the image decoder.
+  const envelope = decodeGraphicData({
+    compression: token.args[1] ?? 'A',
+    data: payload,
+    bytesPerRow: 1,
+    totalBytes,
+  });
+  warnings.push(...envelope.warnings);
+  if (!isSupportedImage(envelope.bytes)) {
+    warnings.push(
+      `~DY${rawName} stores a "${storedFormat}" image this preview cannot decode.`,
+    );
+    return undefined;
+  }
+  try {
+    const mono = toMonochrome(decodeImage(envelope.bytes), {
+      threshold: 128,
+      dither: 'none',
+    });
+    return {
+      name,
+      bytes: mono.data,
+      bytesPerRow: mono.bytesPerRow,
+      rows: mono.height,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    warnings.push(`~DY${rawName} could not be decoded (${message}).`);
+    return undefined;
+  }
 }

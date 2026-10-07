@@ -1,40 +1,54 @@
 import * as vscode from 'vscode';
-import { ZplHoverProvider } from './providers/hoverProvider';
-import { ZplCompletionProvider } from './providers/completionProvider';
-import { ZplSymbolProvider } from './providers/symbolProvider';
-import { ZplFormatter } from './providers/formatter';
-import { ZplFoldingProvider } from './providers/foldingProvider';
-import { ZplDiagnostics } from './diagnostics';
-import { ZplPreviewManager } from './previewPanel';
+import { LabelHoverProvider } from './providers/hoverProvider';
+import { LabelCompletionProvider } from './providers/completionProvider';
+import { LabelSymbolProvider } from './providers/symbolProvider';
+import { LabelFormatter } from './providers/formatter';
+import { LabelFoldingProvider } from './providers/foldingProvider';
+import { LabelDiagnostics } from './diagnostics';
+import { LabelPreviewManager } from './previewPanel';
+import { ALL_FORMAT_IDS, LABEL_FORMATS, isLabelFormatId } from './core/formats';
+import { registerLabelExplorer } from './ui/labelExplorer';
+import { registerCommands } from './ui/commands';
+import { registerStatusBar } from './ui/statusBar';
+import { affectsLabelStudio } from './config';
 
-const SELECTOR_ANY: vscode.DocumentSelector = { language: 'zpl' };
+/** Every label language the extension contributes providers for. */
+const LABEL_SELECTOR: vscode.DocumentSelector = ALL_FORMAT_IDS.map((id) => ({
+  language: LABEL_FORMATS[id].languageId,
+}));
 
 export function activate(context: vscode.ExtensionContext): void {
-  const diagnostics = new ZplDiagnostics();
-  const preview = new ZplPreviewManager(context);
+  const diagnostics = new LabelDiagnostics();
+  const preview = new LabelPreviewManager(context);
+  const output = vscode.window.createOutputChannel('Label Studio: Deploy');
+  const explorer = registerLabelExplorer(context);
 
   context.subscriptions.push(
-    vscode.languages.registerHoverProvider(SELECTOR_ANY, new ZplHoverProvider()),
+    vscode.languages.registerHoverProvider(
+      LABEL_SELECTOR,
+      new LabelHoverProvider(),
+    ),
     vscode.languages.registerCompletionItemProvider(
-      SELECTOR_ANY,
-      new ZplCompletionProvider(),
+      LABEL_SELECTOR,
+      new LabelCompletionProvider(),
       '^',
       '~',
     ),
     vscode.languages.registerDocumentSymbolProvider(
-      SELECTOR_ANY,
-      new ZplSymbolProvider(),
+      LABEL_SELECTOR,
+      new LabelSymbolProvider(),
     ),
     vscode.languages.registerDocumentFormattingEditProvider(
-      SELECTOR_ANY,
-      new ZplFormatter(),
+      LABEL_SELECTOR,
+      new LabelFormatter(),
     ),
     vscode.languages.registerFoldingRangeProvider(
-      SELECTOR_ANY,
-      new ZplFoldingProvider(),
+      LABEL_SELECTOR,
+      new LabelFoldingProvider(),
     ),
     diagnostics,
     preview,
+    output,
   );
 
   context.subscriptions.push(
@@ -44,73 +58,29 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.workspace.onDidCloseTextDocument((doc) => diagnostics.clear(doc)),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('zplViewer.validation')) {
-        for (const doc of vscode.workspace.textDocuments) {
-          diagnostics.refresh(doc);
-        }
+      if (affectsLabelStudio(e, 'validation') || affectsLabelStudio(e, 'label')) {
+        diagnostics.refreshAll();
+      }
+      if (affectsLabelStudio(e, 'printers')) {
+        explorer.refresh();
       }
     }),
   );
-  for (const doc of vscode.workspace.textDocuments) {
-    diagnostics.refresh(doc);
-  }
+  diagnostics.refreshAll();
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('zplViewer.preview', () => {
-      const editor = requireZplEditor();
-      if (editor) {
-        preview.show(editor.document, false);
-      }
-    }),
-    vscode.commands.registerCommand('zplViewer.previewToSide', () => {
-      const editor = requireZplEditor();
-      if (editor) {
-        preview.show(editor.document, true);
-      }
-    }),
-    vscode.commands.registerCommand('zplViewer.refreshPreview', () => {
-      preview.refreshActive();
-    }),
-    vscode.commands.registerCommand('zplViewer.exportPng', () =>
-      exportLabel(preview, 'png'),
-    ),
-    vscode.commands.registerCommand('zplViewer.exportPdf', () =>
-      exportLabel(preview, 'pdf'),
-    ),
-    vscode.commands.registerCommand('zplViewer.formatDocument', async () => {
-      const editor = requireZplEditor();
-      if (!editor) {
-        return;
-      }
-      await vscode.commands.executeCommand('editor.action.formatDocument');
-    }),
-    vscode.commands.registerCommand('zplViewer.validate', () => {
-      const editor = requireZplEditor();
-      if (editor) {
-        diagnostics.refresh(editor.document);
-        vscode.window.showInformationMessage('ZPL validation refreshed.');
-      }
-    }),
-    vscode.commands.registerCommand('zplViewer.insertTemplate', async () => {
-      const editor = requireZplEditor();
-      if (!editor) {
-        return;
-      }
-      const snippet = new vscode.SnippetString(
-        [
-          '^XA',
-          '^CF0,30',
-          '^FO${1:50},${2:50}^FD${3:Hello, ZPL}^FS',
-          '^XZ',
-          '',
-        ].join('\n'),
-      );
-      await editor.insertSnippet(snippet);
-    }),
+    ...registerCommands({ context, preview, diagnostics, explorer, output }),
+    registerStatusBar(context),
   );
 
   if (process.env.VSCODE_ZPL_TEST === '1') {
     context.subscriptions.push(
+      vscode.commands.registerCommand(
+        'labelStudio._test.waitForPreviewReady',
+        async (uri: vscode.Uri, timeoutMs?: number) => {
+          await preview.waitForReady(uri, timeoutMs);
+        },
+      ),
       vscode.commands.registerCommand(
         'zplViewer._test.waitForPreviewReady',
         async (uri: vscode.Uri, timeoutMs?: number) => {
@@ -119,64 +89,18 @@ export function activate(context: vscode.ExtensionContext): void {
       ),
     );
   }
+
+  // Label files without a dedicated extension (.prn, .lbl) open as ZPL by
+  // default; re-validate when a user switches the language mode by hand.
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor && isLabelFormatId(editor.document.languageId)) {
+        diagnostics.refresh(editor.document);
+      }
+    }),
+  );
 }
 
 export function deactivate(): void {
   // intentionally empty; subscriptions handle cleanup
-}
-
-function requireZplEditor(): vscode.TextEditor | undefined {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.languageId !== 'zpl') {
-    void vscode.window.showWarningMessage(
-      'Open a ZPL document before running this command.',
-    );
-    return undefined;
-  }
-  return editor;
-}
-
-async function exportLabel(
-  preview: ZplPreviewManager,
-  format: 'png' | 'pdf',
-): Promise<void> {
-  const editor = requireZplEditor();
-  if (!editor) {
-    return;
-  }
-  const defaultUri = defaultExportUri(editor.document.uri, format);
-  const target = await vscode.window.showSaveDialog({
-    defaultUri,
-    filters:
-      format === 'pdf'
-        ? { 'PDF Document': ['pdf'] }
-        : { 'PNG Image': ['png'] },
-  });
-  if (!target) {
-    return;
-  }
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Exporting ZPL label as ${format.toUpperCase()}…`,
-      cancellable: false,
-    },
-    async () => {
-      const bytes = await preview.export(editor.document, format);
-      await vscode.workspace.fs.writeFile(target, bytes);
-    },
-  );
-  const open = 'Open';
-  const choice = await vscode.window.showInformationMessage(
-    `Exported to ${target.fsPath}`,
-    open,
-  );
-  if (choice === open) {
-    await vscode.env.openExternal(target);
-  }
-}
-
-function defaultExportUri(source: vscode.Uri, format: 'png' | 'pdf'): vscode.Uri {
-  const path = source.path.replace(/\.[^./]+$/, '') + '.' + format;
-  return source.with({ path });
 }
