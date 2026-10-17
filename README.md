@@ -1,5 +1,11 @@
 # Label Studio
 
+> Label Studio: offline VS Code extension to read, preview, create, merge and deploy ZPL II and EPL2 thermal labels.
+
+[![CI](https://github.com/bamr87/zpl-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/bamr87/zpl-viewer/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/bamr87/zpl-viewer)](LICENSE)
+
+## Overview
+
 A VS Code extension for everything that happens to a thermal label before it comes off the printer: **read** it, **create** it, **modify** it, **analyze** it, **import** artwork and captures into it, **merge** data through it, and **deploy** it to a printer.
 
 **Fully offline for everything except deployment.** Labels are parsed, rendered, validated and exported locally — no HTTP calls, no external services, no Docker, no binaries to install. The one thing that leaves your machine is a label you explicitly deploy, sent to the printer you configured.
@@ -258,8 +264,7 @@ Draw-call assertions pin the same geometry with no environment dependence, and a
 
 `zplViewer._test.waitForPreviewReady` / `labelStudio._test.waitForPreviewReady` are registered only when `VSCODE_ZPL_TEST=1`, which `npm run test:integration` sets via `cross-env`. The hook is test-only and never exposed in normal sessions.
 
-## Project layout
-
+## Project structure
 ```
 .
 ├── language-configuration.json          # ZPL brackets / comments / folding
@@ -298,6 +303,19 @@ Draw-call assertions pin the same geometry with no environment dependence, and a
 - **SVG export** is vector throughout: barcodes come from the same encoder the preview uses, and bitmaps become runs of rectangles rather than an embedded raster.
 - Unknown commands surface as diagnostics rather than aborting the render.
 
+## Contributing
+
+Contributions are welcome via pull request. Use [Conventional Commits](https://www.conventionalcommits.org/) and keep the CI checks green. The fleet-wide workflow is described in the hub's [CONTRIBUTING.md](https://github.com/bamr87/bamr87/blob/main/CONTRIBUTING.md). AI agents should start with [CLAUDE.md](CLAUDE.md).
+
+## Changelog
+
+Notable changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
-MIT
+Released under the [MIT License](LICENSE).
+
+---
+
+<!-- bamr87-portfolio-footer -->
+<sub>Part of the [bamr87 portfolio](https://github.com/bamr87) — browse every project on [Amr's GitHub profile](https://github.com/bamr87).</sub>
