@@ -2,6 +2,13 @@
 
 All notable changes to the Label Studio extension (formerly ZPL Viewer) will be documented in this file.
 
+## [0.3.0](https://github.com/bamr87/zpl-viewer/compare/zpl-viewer-v0.2.0...zpl-viewer-v0.3.0) (2026-10-21)
+
+
+### Features
+
+* transform ZPL Viewer into Label Studio ([#24](https://github.com/bamr87/zpl-viewer/issues/24)) ([a7dbb01](https://github.com/bamr87/zpl-viewer/commit/a7dbb01902abb27d601478b2ca3cf564a2220537))
+
 ## [Unreleased] - Label Studio
 
 The extension grew from a ZPL viewer into a general label, barcode and data-integration toolkit.

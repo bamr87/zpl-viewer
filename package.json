@@ -1,8 +1,8 @@
 {
   "name": "zpl-viewer",
-  "displayName": "Label Studio \u2014 Labels, Barcodes & Data",
-  "description": "Read, create, analyze, import, merge and deploy thermal labels: ZPL II and EPL2 language support, live preview, a barcode studio for 24 symbologies, CSV/JSON data merge, and printer deployment \u2014 all offline.",
-  "version": "0.2.0",
+  "displayName": "Label Studio — Labels, Barcodes & Data",
+  "description": "Read, create, analyze, import, merge and deploy thermal labels: ZPL II and EPL2 language support, live preview, a barcode studio for 24 symbologies, CSV/JSON data merge, and printer deployment — all offline.",
+  "version": "0.3.0",
   "publisher": "zpl-viewer",
   "license": "MIT",
   "engines": {
@@ -297,7 +297,7 @@
       },
       {
         "command": "labelStudio.showActions",
-        "title": "Label Actions\u2026",
+        "title": "Label Actions…",
         "category": "Label",
         "icon": "$(list-unordered)"
       },
