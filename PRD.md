@@ -1,8 +1,6 @@
 # PRD — Label Studio (zpl-viewer)
 
-> Product requirements for [`bamr87/zpl-viewer`](https://github.com/bamr87/zpl-viewer).
-> Derived from the README, agent docs, config and code in this repo. Anything not
-> stated in those sources is marked **TBD**; success metrics are proposals.
+> Product requirements for Label Studio ([`bamr87/zpl-viewer`](https://github.com/bamr87/zpl-viewer)) — problem, users, goals, scope and proposed success metrics, derived from the README, agent docs, config and code, with anything those sources do not state marked **TBD**.
 
 ## 1. Overview / problem
 
@@ -57,8 +55,8 @@ Label Studio is an offline VS Code extension to read, preview, create, modify, a
 
 ## 7. Roadmap / open questions
 
-- Marketplace publishing plan (see RELEASING.md): TBD
+- Marketplace publishing plan (release flow: [AGENTS.md § Conventions](AGENTS.md#conventions)): TBD
 
 ## 8. Links
 
-- [README.md](README.md) · [AGENTS.md](AGENTS.md) · [RELEASING.md](RELEASING.md) · [CHANGELOG.md](CHANGELOG.md)
+- [README.md](README.md) · [AGENTS.md](AGENTS.md) · [CHANGELOG.md](CHANGELOG.md) · [Issues](https://github.com/bamr87/zpl-viewer/issues) (the backlog of record)
