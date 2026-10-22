@@ -14,7 +14,9 @@
 | --- | --- |
 | [`AGENTS.md`](../AGENTS.md) | Label Studio (`zpl-viewer`), an offline VS Code extension for ZPL II and EPL2 thermal labels — the commands, layout, conventions and layering rules for working on it. |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Release history, written by release-please from the merged pull request titles. |
-| [`PRD.md`](../PRD.md) | Product requirements for Label Studio ([`bamr87/zpl-viewer`](https://github.com/bamr87/zpl-viewer)) — problem, users, goals, scope and proposed success metrics, derived from the README, agent docs, config and code, with anything those… |
+| [`PRD.md`](../PRD.md) | Product requirements for Label Studio: problem, users, goals, scope and proposed success metrics, derived from this repo's README, agent docs, config and code, with anything they do not state marked **TBD**. |
+| [`src/`](../src/README.md) | What each source module does and which layer it belongs to — the vscode layer, the pure layer shared with the webview, and the node-only layer. |
+| [`tools/`](../tools/README.md) | Operator scripts vendored from the bamr87 hub; nothing here ships to users, and nothing here is edited in this repo. |
 
 ### `docs/`
 
@@ -22,18 +24,6 @@
 | --- | --- |
 | [`docs/testing.md`](testing.md) | The four test layers, what each one proves, why rendering is checked with recorded draw calls instead of golden images, and the test-only preview hook. |
 | [`docs/adr/`](adr/README.md) | The decisions about zpl-viewer that are hard to reverse, one numbered record each, with the format every new ADR follows. |
-
-### `src/`
-
-| Document | What it covers |
-| --- | --- |
-| [`src/README.md`](../src/README.md) | What each source module does and which layer it belongs to — the vscode layer, the pure layer shared with the webview, and the node-only layer. |
-
-### `tools/`
-
-| Document | What it covers |
-| --- | --- |
-| [`tools/README.md`](../tools/README.md) | Operator scripts vendored from the bamr87 hub; nothing here ships to users, and nothing here is edited in this repo. |
 
 ### `docs/reference/`
 

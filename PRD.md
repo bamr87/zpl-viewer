@@ -1,6 +1,6 @@
 # PRD — Label Studio (zpl-viewer)
 
-> Product requirements for Label Studio ([`bamr87/zpl-viewer`](https://github.com/bamr87/zpl-viewer)) — problem, users, goals, scope and proposed success metrics, derived from the README, agent docs, config and code, with anything those sources do not state marked **TBD**.
+> Product requirements for Label Studio: problem, users, goals, scope and proposed success metrics, derived from this repo's README, agent docs, config and code, with anything they do not state marked **TBD**.
 
 ## 1. Overview / problem
 
