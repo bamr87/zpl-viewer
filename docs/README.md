@@ -22,8 +22,10 @@
 
 | Document | What it covers |
 | --- | --- |
+| [`docs/constitution.md`](constitution.md) | The rules every change to this repo must satisfy, whoever makes it — a human or an AI agent. Agents read this before [AGENTS.md](../AGENTS.md) conventions, the [PRD](../PRD.md), or the [feature catalog](../features/features.yml). Ratified… |
 | [`docs/testing.md`](testing.md) | The four test layers, what each one proves, why rendering is checked with recorded draw calls instead of golden images, and the test-only preview hook. |
 | [`docs/adr/`](adr/README.md) | The decisions about zpl-viewer that are hard to reverse, one numbered record each, with the format every new ADR follows. |
+| [`docs/amendments/`](amendments/README.md) | The append-only log of changes to [the constitution](constitution.md). |
 
 ### `docs/reference/`
 
