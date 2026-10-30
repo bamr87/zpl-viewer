@@ -1,12 +1,18 @@
 name: Release
 
-# Scaffolded by tools/adopt-release.sh — Conventional Commits drive release-please
-# (opens a release PR that bumps the version + CHANGELOG); merging it tags, releases,
-# and publishes. Shared logic lives in bamr87/.github. See release-please-config.json.
+# Conventional Commits drive release-please: it opens a release PR that bumps the
+# version + CHANGELOG, and merging that PR tags, releases, and publishes.
+#
+# The release logic is the hub's ONE reusable release-please workflow (decision
+# D3, UPS-REPO-21): bamr87/bamr87/.github/workflows/release-please.yml, pinned to
+# its floating major tag, never a branch (UPS-WORK-10). It replaces the call to
+# bamr87/.github's older copy, which the conformance check flagged for migration.
+# See release-please-config.json for the release type and changelog sections.
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Serialize release-please: back-to-back merges to main (e.g. two dependabot
 # merges seconds apart) otherwise race each other updating the release PR.
@@ -16,12 +22,59 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
+  # release-please cannot open its release PR on a repo that has neither a
+  # RELEASE_PLEASE_TOKEN secret nor the Actions setting that lets GITHUB_TOKEN
+  # open pull requests. It computes the release, updates its release branch, and
+  # then exits 1 on `POST /pulls` with "GitHub Actions is not permitted to
+  # create or approve pull requests" — on every push, indefinitely, with nothing
+  # else about the run wrong (bamr87/bamr87#406, #424).
+  #
+  # So ask first. A missing credential becomes a clean skip with a warning that
+  # says what to provision, instead of a red run per push. This gate is
+  # self-healing: the moment RELEASE_PLEASE_TOKEN exists here, the next push
+  # releases, with no change to this file.
+  #
+  # Remove this job and the `needs:`/`if:` below once the hub's `v2` tag carries
+  # bamr87/bamr87#437, which guards the same denial inside the reusable workflow
+  # itself. A manual dispatch bypasses the gate — that is how to run a release
+  # if the other remedy (the Actions setting) is chosen instead of the PAT.
+  preflight:
+    name: Release credential present?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      armed: ${{ steps.probe.outputs.armed }}
+    steps:
+      - id: probe
+        env:
+          # A comparison, never the value: this prints true or false.
+          ARMED: ${{ secrets.RELEASE_PLEASE_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          echo "armed=$ARMED" >> "$GITHUB_OUTPUT"
+          if [ "$ARMED" = "true" ]; then
+            echo "RELEASE_PLEASE_TOKEN is present — running release-please."
+            exit 0
+          fi
+          echo "::warning title=Release paused::No RELEASE_PLEASE_TOKEN on $GITHUB_REPOSITORY, and GITHUB_TOKEN may not open pull requests, so release-please cannot open its release PR. Skipping instead of failing; nothing is lost."
+          {
+            echo "### Release skipped — no credential to open the release PR"
+            echo
+            echo "Either of these starts releases again, and the next push to the default branch opens the PR:"
+            echo
+            echo "1. A \`RELEASE_PLEASE_TOKEN\` secret here — a PAT with \`contents: write\` + \`pull requests: write\`. Preferred: the release PR then runs CI, and this gate opens on its own."
+            echo "2. Settings > Actions > General > Workflow permissions > \"Allow GitHub Actions to create and approve pull requests\". Then run this workflow from the Actions tab (a manual dispatch bypasses this gate), and drop the gate."
+            echo
+            echo "Tracked in [bamr87/bamr87#406](https://github.com/bamr87/bamr87/issues/406)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   release:
-    uses: bamr87/.github/.github/workflows/release-please.yml@v1
+    needs: preflight
+    if: needs.preflight.outputs.armed == 'true' || github.event_name == 'workflow_dispatch'
+    uses: bamr87/bamr87/.github/workflows/release-please.yml@v2
     permissions:
       contents: write
       pull-requests: write
