@@ -1,5 +1,7 @@
 # `src/` — module guide
 
+> What each source module does and which layer it belongs to — the vscode layer, the pure layer shared with the webview, and the node-only layer.
+
 The extension is layered so that almost everything interesting is a pure function. Only the files that import `vscode` know they are running inside an editor; everything under `core/`, `image/`, `barcode/`, `data/`, `emit/`, `analysis/`, `formats/` and `renderer/` is isomorphic and runs unchanged in the webview bundle and in unit tests.
 
 ```

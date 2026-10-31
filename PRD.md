@@ -1,8 +1,6 @@
 # PRD — Label Studio (zpl-viewer)
 
-> Product requirements for [`bamr87/zpl-viewer`](https://github.com/bamr87/zpl-viewer).
-> Derived from the README, agent docs, config and code in this repo. Anything not
-> stated in those sources is marked **TBD**; success metrics are proposals.
+> Product requirements for Label Studio: problem, users, goals, scope and proposed success metrics, derived from this repo's README, agent docs, config and code, with anything they do not state marked **TBD**.
 
 ## 1. Overview / problem
 
@@ -79,8 +77,8 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 
 ## 7. Roadmap / open questions
 
-- Marketplace publishing plan (see RELEASING.md): TBD
+- Marketplace publishing plan (release flow: [AGENTS.md § Conventions](AGENTS.md#conventions)): TBD
 
 ## 8. Links
 
-- [README.md](README.md) · [AGENTS.md](AGENTS.md) · [RELEASING.md](RELEASING.md) · [CHANGELOG.md](CHANGELOG.md)
+- [README.md](README.md) · [AGENTS.md](AGENTS.md) · [CHANGELOG.md](CHANGELOG.md) · [Issues](https://github.com/bamr87/zpl-viewer/issues) (the backlog of record)

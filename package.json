@@ -982,6 +982,8 @@
     "watch-tests": "tsc -p ./tsconfig.test.json -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
+    "docs:reference": "node scripts/gen-reference-docs.mjs",
+    "docs:check": "node scripts/gen-reference-docs.mjs --check",
     "test:unit": "npm run compile-tests && c8 --all --include=src/**/*.ts --exclude=src/test/** mocha \"out/test/unit/**/*.test.js\" \"out/test/renderer/**/*.test.js\"",
     "test:integration": "npm run compile-tests && cross-env VSCODE_ZPL_TEST=1 node ./out/test/runTest.js",
     "test:e2e": "playwright test -c src/test/e2e/playwright.config.ts",
