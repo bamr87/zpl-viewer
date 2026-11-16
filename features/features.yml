@@ -80,3 +80,48 @@ features:
     surface: infra
     link: "src/deploy"
     docs: "README.md"
+  - id: ZPL-008
+    title: "Preview ↔ source navigation"
+    description: "Click an element in the preview to select its source; the preview follows the editor cursor to the label being edited and outlines the ops under it"
+    implemented: false
+    status: planned
+    prd: [FR8]
+    surface: ui
+    link: "src/previewPanel.ts"
+    docs: "PRD.md"
+  - id: ZPL-009
+    title: "Restricted Mode support"
+    description: "Offline features work in untrusted workspaces; deploy and workspace printer profiles need a trusted workspace"
+    implemented: false
+    status: planned
+    prd: [FR9]
+    surface: infra
+    link: "package.json"
+    docs: "PRD.md"
+  - id: ZPL-010
+    title: "Density and orientation transforms"
+    description: "Rewrite a label for another print density or rotate it 90/180/270 degrees, in ZPL II and EPL2, with every approximation reported"
+    implemented: false
+    status: planned
+    prd: [FR10]
+    surface: infra
+    link: "src/core/pipeline.ts"
+    docs: "PRD.md"
+  - id: ZPL-011
+    title: "Diagnostic quick fixes and rule explanations"
+    description: "Lint rule ids link to an explanation, and deterministic fixes are offered as VS Code quick fixes"
+    implemented: false
+    status: planned
+    prd: [FR11]
+    surface: ui
+    link: "src/diagnostics.ts"
+    docs: "PRD.md"
+  - id: ZPL-012
+    title: "PDF sheet layout"
+    description: "Export labels onto Letter/Legal/A4/A5/A6 pages as an N×M grid with alignment and an optional cut border"
+    implemented: false
+    status: planned
+    prd: [FR12]
+    surface: infra
+    link: "src/webview/main.ts"
+    docs: "PRD.md"

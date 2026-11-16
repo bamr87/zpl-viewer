@@ -49,6 +49,11 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 | [ZPL-005](features/features.yml) | Analysis: metrics, ink coverage, lint rules | shipped | [`src/analysis`](src/analysis) · [`README.md`](README.md) | FR2 |
 | [ZPL-006](features/features.yml) | Data merge of {{placeholder}} templates from CSV/TSV/JSON/JSONL | shipped | [`src/data`](src/data) · [`README.md`](README.md) | FR6 |
 | [ZPL-007](features/features.yml) | Deploy via raw TCP 9100 | shipped | [`src/deploy`](src/deploy) · [`README.md`](README.md) | FR7, NFR3 |
+| [ZPL-008](features/features.yml) | Preview ↔ source navigation | planned | [`src/previewPanel.ts`](src/previewPanel.ts) · [`PRD.md`](PRD.md) | FR8 |
+| [ZPL-009](features/features.yml) | Restricted Mode support | planned | [`package.json`](package.json) · [`PRD.md`](PRD.md) | FR9 |
+| [ZPL-010](features/features.yml) | Density and orientation transforms | planned | [`src/core/pipeline.ts`](src/core/pipeline.ts) · [`PRD.md`](PRD.md) | FR10 |
+| [ZPL-011](features/features.yml) | Diagnostic quick fixes and rule explanations | planned | [`src/diagnostics.ts`](src/diagnostics.ts) · [`PRD.md`](PRD.md) | FR11 |
+| [ZPL-012](features/features.yml) | PDF sheet layout | planned | [`src/webview/main.ts`](src/webview/main.ts) · [`PRD.md`](PRD.md) | FR12 |
 
 **Requirement → feature trace**
 
@@ -61,6 +66,11 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 | FR6 | ZPL-006 |
 | FR7 | ZPL-007 |
 | NFR3 | ZPL-007 |
+| FR8 | ZPL-008 |
+| FR9 | ZPL-009 |
+| FR10 | ZPL-010 |
+| FR11 | ZPL-011 |
+| FR12 | ZPL-012 |
 <!-- features:end -->
 
 ## 5. Requirements
@@ -74,6 +84,14 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 - FR5: Labels converted between ZPL II and EPL2 through the one shared drawing-op IR
 - FR6: `{{placeholder}}` templates merged with CSV/TSV/JSON/JSONL data
 - FR7: Deploy to a printer by raw TCP 9100, a device path or a spool directory, only on an explicit user action
+
+**Functional — planned (deep dive 2026-11-11, not built)**
+
+- FR8: Preview ↔ source navigation: clicking a drawn element in the preview selects the source range that produced it, and moving the editor cursor into a `^XA … ^XZ` (or EPL) format shows that label in the preview and outlines the ops under the cursor
+- FR9: Restricted Mode support: declare limited Workspace Trust support so the offline features (language support, preview, export, validation, analysis) work in untrusted workspaces, while deploy and printer profiles from workspace settings are available only in trusted workspaces
+- FR10: Density and orientation transforms: rewrite a label's source for another print density (6/8/12/24 dpmm) or rotate it 90/180/270 degrees, scaling field positions, sizes and graphics and reporting every approximation, for both ZPL II and EPL2
+- FR11: Diagnostic quick fixes and rule explanations: each lint rule id links to an explanation (what, why, a fixed example), and rules with a deterministic fix offer it as a VS Code quick fix
+- FR12: PDF sheet layout: export labels onto Letter, Legal, A4, A5 or A6 pages as an N×M grid with alignment and an optional cut border, alongside the current one-label-per-page PDF
 
 **Non-functional**
 
