@@ -2,7 +2,7 @@
 
 # zpl-viewer
 
-> Label Studio (`zpl-viewer`), an offline VS Code extension for ZPL II and EPL2 thermal labels — the commands, layout, conventions and layering rules for working on it.
+> Label Studio's direction is to become the ultimate open home for all things thermal labels: data, tools, resources and transparency, with offline ZPL II and EPL2 preview, authoring, analysis, merge and deploy for everyone ([constitution](docs/constitution.md) §1).
 
 ## What this repo is
 

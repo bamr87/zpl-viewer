@@ -6,6 +6,17 @@
 
 Label Studio is an offline VS Code extension to read, preview, create, modify, analyze, import, merge and deploy ZPL II and EPL2 thermal labels. Everything except deployment runs locally — no HTTP calls, external services, Docker or binaries.
 
+## 1.1 Missions
+
+Label Studio's direction is to become the ultimate open home for all things thermal labels — data, tools, resources and transparency, gathered in one place that anyone can inspect and reuse.
+
+1. **Provide data, tools, resources and transparency for all stakeholders, label practitioners and the general public.** Developers and integrators, warehouse and IT staff, and the general public are first-class audiences. The aim is a shared, open commons: the same sources, the same tools, and the same trail of evidence for everyone.
+2. **Make every ZPL II and EPL2 label readable, previewable, authorable, analyzable and mergeable entirely offline.** Everything except explicit deployment runs locally — no HTTP calls, external services, Docker or binaries required to edit. A shared intermediate representation is the path to conversion between dialects; every preview and analysis stays inspectable.
+3. **Put that studio in every operator's hands, and make deploying a label to a printer effortless and auditable.** Serve it as a VS Code extension that can merge data and deploy over raw TCP, a device path or a spool directory — an open toolkit for working with all things thermal labels.
+
+These missions set the course; they do not claim the work is finished. They serve the PRD goals in §3: accurate preview and export, barcode validation, dialect conversion, and a fully offline editor except explicit deploy. The earlier mission paragraph is absorbed into these three. Every feature must trace to them.
+
+
 ## 2. Target users
 
 - Developers and integrators writing ZPL/EPL labels (shipping, product, asset tags)
@@ -49,12 +60,14 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 | [ZPL-005](features/features.yml) | Analysis: metrics, ink coverage, lint rules | shipped | [`src/analysis`](src/analysis) · [`README.md`](README.md) | TBD |
 | [ZPL-006](features/features.yml) | Data merge of {{placeholder}} templates from CSV/TSV/JSON/JSONL | shipped | [`src/importers`](src/importers) · [`README.md`](README.md) | TBD |
 | [ZPL-007](features/features.yml) | Deploy via raw TCP 9100 | shipped | [`src/deploy`](src/deploy) · [`README.md`](README.md) | TBD |
+| [ZPL-008](features/features.yml) | Missions in constitution §1 | planned | [`docs/constitution.md`](docs/constitution.md) | §1.1 |
 
 **Requirement → feature trace**
 
 | Requirement | Features |
 | --- | --- |
 | TBD | ZPL-001, ZPL-002, ZPL-003, ZPL-004, ZPL-005, ZPL-006, ZPL-007 |
+| §1.1 | ZPL-008 |
 <!-- features:end -->
 
 ## 5. Requirements
