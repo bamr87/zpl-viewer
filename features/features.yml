@@ -22,7 +22,7 @@ features:
     description: "Syntax highlighting, hover docs, IntelliSense, outline/folding"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR3]
     surface: docs
     link: "src/providers"
     docs: "README.md"
@@ -31,7 +31,7 @@ features:
     description: "Live canvas preview with zoom and paging"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR4]
     surface: ui
     link: "src/previewPanel.ts"
     docs: "README.md"
@@ -40,7 +40,7 @@ features:
     description: "Templates, snippets and Barcode Studio (24 symbologies via bwip-js)"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR2]
     surface: infra
     link: "src/barcode"
     docs: "README.md"
@@ -49,7 +49,7 @@ features:
     description: "Formatters, image import, format conversion; all ZPL graphic encodings"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR5]
     surface: infra
     link: "src/formatting.ts"
     docs: "README.md"
@@ -58,7 +58,7 @@ features:
     description: "Analysis: metrics, ink coverage, lint rules"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR2]
     surface: infra
     link: "src/analysis"
     docs: "README.md"
@@ -67,16 +67,16 @@ features:
     description: "Data merge of `{{placeholder}}` templates from CSV/TSV/JSON/JSONL"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR6]
     surface: infra
-    link: "src/importers"
+    link: "src/data"
     docs: "README.md"
   - id: ZPL-007
     title: "Deploy via raw TCP 9100"
     description: "Deploy via raw TCP 9100, device path or spool directory"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR7, NFR3]
     surface: infra
     link: "src/deploy"
     docs: "README.md"
