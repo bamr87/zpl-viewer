@@ -31,6 +31,7 @@ import { importImage, bitmapToEplGraphicWrite, bitmapToZplGraphicField } from '.
 import { importCapture } from '../importers/capture';
 import { deployLabel } from '../deploy/deploy';
 import { PrinterProfile, describePrinter } from '../deploy/printers';
+import { confirmationMessage, needsConfirmation, resolveTargetPath } from '../deploy/trust';
 import { SYMBOLOGIES, findSymbology } from '../barcode/symbologies';
 import { validateBarcodeData } from '../barcode/validate';
 import { emitZplPage } from '../emit/zpl';
@@ -48,6 +49,7 @@ import {
   getImportConfig,
   getMergeConfig,
   getPrinters,
+  getPrintersWithOrigin,
   getRenderConfig,
   getSetting,
 } from '../config';
@@ -171,10 +173,10 @@ export function registerCommands(deps: CommandContext): vscode.Disposable[] {
 
     // --------------------------------------------------------------- deploy
     register('labelStudio.deploy', (target?: unknown) =>
-      deployCommand(output, target, false),
+      deployCommand(context, output, target, false),
     ),
     register('labelStudio.deployDryRun', (target?: unknown) =>
-      deployCommand(output, target, true),
+      deployCommand(context, output, target, true),
     ),
     register('labelStudio.addPrinter', () => addPrinterCommand(explorer)),
     register('labelStudio.editPrinter', (target?: unknown) =>
@@ -898,7 +900,11 @@ async function pickPrinter(name?: string): Promise<PrinterProfile | undefined> {
   return printers.find((printer) => printer.name === choice?.name);
 }
 
+/** workspaceState key: outside-workspace targets the user already approved. */
+const APPROVED_DEPLOY_PATHS = 'labelStudio.deploy.approvedOutsidePaths';
+
 async function deployCommand(
+  context: vscode.ExtensionContext,
   output: vscode.OutputChannel,
   target: unknown,
   dryRun: boolean,
@@ -911,24 +917,49 @@ async function deployCommand(
     return;
   }
   const editor = { document };
-  const profile = await pickPrinter(printerName(target));
-  if (!profile) {
+  const picked = await pickPrinter(printerName(target));
+  if (!picked) {
     return;
   }
+  const { origin } = getPrintersWithOrigin();
+  // A relative file/directory path resolves against the workspace, never the
+  // extension host's working directory, and the transport gets the absolute
+  // path the user confirmed.
+  const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+  const resolved = resolveTargetPath(picked, folders);
+  const profile: PrinterProfile = resolved
+    ? { ...picked, path: resolved.absolutePath }
+    : picked;
   const source = editor.document.getText();
   const format = formatOfDocument(editor.document);
   const parsed = parseLabel(source, { format, dpmm: profile.dpmm });
   const config = getDeployConfig();
 
-  if (!dryRun && config.confirmBeforeSend) {
+  const approved = context.workspaceState.get<string[]>(APPROVED_DEPLOY_PATHS, []);
+  const outsideUnapproved =
+    !dryRun &&
+    resolved !== undefined &&
+    !resolved.insideWorkspace &&
+    !approved.includes(resolved.absolutePath);
+  if (
+    outsideUnapproved ||
+    needsConfirmation({ origin, confirmSetting: config.confirmBeforeSend, dryRun })
+  ) {
     const send = 'Send';
     const confirmation = await vscode.window.showWarningMessage(
-      `Send ${parsed.pages.length} label(s) to ${profile.name} (${describePrinter(profile)})?`,
+      confirmationMessage({ profile, origin, labelCount: parsed.pages.length, resolved }),
       { modal: true },
       send,
     );
     if (confirmation !== send) {
       return;
+    }
+    if (outsideUnapproved && resolved) {
+      // Ask once per exact outside path; a changed path asks again.
+      await context.workspaceState.update(APPROVED_DEPLOY_PATHS, [
+        ...approved,
+        resolved.absolutePath,
+      ]);
     }
   }
 

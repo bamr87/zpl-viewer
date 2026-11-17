@@ -32,6 +32,16 @@
     "onLanguage:zpl",
     "onLanguage:epl"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In a Restricted Mode workspace, printers and the Deploy confirmation setting come only from your user settings.",
+      "restrictedConfigurations": [
+        "labelStudio.printers",
+        "labelStudio.deploy.confirmBeforeSend"
+      ]
+    }
+  },
   "main": "./dist/extension.js",
   "repository": {
     "type": "git",
@@ -805,7 +815,8 @@
         "labelStudio.deploy.confirmBeforeSend": {
           "type": "boolean",
           "default": true,
-          "description": "Ask for confirmation before sending a label to a printer."
+          "scope": "application",
+          "description": "Ask for confirmation before sending a label to a printer. Only your user settings count: a workspace cannot turn this off, and a printer defined by the workspace always asks."
         },
         "labelStudio.deploy.timeoutMs": {
           "type": "number",

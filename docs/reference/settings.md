@@ -25,7 +25,7 @@
 | `labelStudio.import.invert` | `boolean` | `false` | Swap black and white when importing artwork. Use for light logos meant to print on a dark field. |
 | `labelStudio.import.trim` | `boolean` | `false` | Crop blank margins from imported artwork so the graphic starts where the ink does. |
 | `labelStudio.import.rotate` | `number` | `0` | Rotate imported artwork clockwise by this many degrees. Allowed: `0`, `90`, `180`, `270`. |
-| `labelStudio.deploy.confirmBeforeSend` | `boolean` | `true` | Ask for confirmation before sending a label to a printer. |
+| `labelStudio.deploy.confirmBeforeSend` | `boolean` | `true` | Ask for confirmation before sending a label to a printer. Only your user settings count: a workspace cannot turn this off, and a printer defined by the workspace always asks. Scope: `application`. |
 | `labelStudio.deploy.timeoutMs` | `number` | `10000` | How long to wait for a network printer before giving up. Range: 500 to 120000. |
 | `labelStudio.printers` | `array` | `[]` | Printers labels can be deployed to. |
 
