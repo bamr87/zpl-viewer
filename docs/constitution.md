@@ -6,11 +6,17 @@
 > Agents read this before [AGENTS.md](../AGENTS.md) conventions, the [PRD](../PRD.md), or the
 > [feature catalog](../features/features.yml). Ratified by merged PR; amended only per § 8.
 
-## 1. Mission
+## 1. Missions
 
-Label Studio is an offline VS Code extension to read, preview, create, modify, analyze, import, merge and deploy ZPL II and EPL2 thermal labels. Everything except deployment runs locally — no HTTP calls, external services, Docker or binaries.
+Label Studio's direction is to become the ultimate open home for all things thermal labels — data, tools, resources and transparency, gathered in one place that anyone can inspect and reuse.
 
-_Source: [PRD.md](../PRD.md)._
+1. **Provide data, tools, resources and transparency for all stakeholders, label practitioners and the general public.** Developers and integrators, warehouse and IT staff, and the general public are first-class audiences. The aim is a shared, open commons: the same sources, the same tools, and the same trail of evidence for everyone.
+2. **Make every ZPL II and EPL2 label readable, previewable, authorable, analyzable and mergeable entirely offline.** Everything except explicit deployment runs locally — no HTTP calls, external services, Docker or binaries required to edit. A shared intermediate representation is the path to conversion between dialects; every preview and analysis stays inspectable.
+3. **Put that studio in every operator's hands, and make deploying a label to a printer effortless and auditable.** Serve it as a VS Code extension that can merge data and deploy over raw TCP, a device path or a spool directory — an open toolkit for working with all things thermal labels.
+
+These missions set the course; they do not claim the work is finished. They serve the PRD goals in §3: accurate preview and export, barcode validation, dialect conversion, and a fully offline editor except explicit deploy. The earlier mission paragraph is absorbed into these three. Every feature must trace to them.
+
+_Source: [../PRD.md](../PRD.md) §1.1._
 
 ## 2. Invariants (non-negotiable)
 
