@@ -56,7 +56,7 @@ Everything between an image file and printable dots, and pure so the preview sha
 `imageToLabel.ts` is the label side of artwork import: it takes decoded pixels from `image/` and emits `^GF` / `GW` fields, reporting the judgement calls (a downscale, a trim, heavy ink coverage) the user should see. `capture.ts` cleans a raw printer capture into editable labels.
 
 ### `deploy/`
-`printers.ts` models printer profiles from settings data; `transports.ts` implements raw TCP 9100, file/device and spool-directory delivery — the only place in the extension that opens a socket; `deploy.ts` orchestrates conversion + send and returns an outcome rather than throwing.
+`printers.ts` models printer profiles from settings data; `transports.ts` implements raw TCP 9100, file/device and spool-directory delivery — the only place in the extension that opens a socket; `deploy.ts` orchestrates conversion + send and returns an outcome rather than throwing. `trust.ts` holds Deploy's trust decisions, free of `vscode` and `fs`: which settings layer a printer list came from, whether a send must be confirmed (a printer the workspace defined always asks, whatever `confirmBeforeSend` says; a dry run never does), the confirmation text, and where a `file` / `directory` path resolves (relative paths resolve against the first workspace folder, and the transport receives the absolute path). `labelStudio.deploy.confirmBeforeSend` is application-scoped, and both it and `labelStudio.printers` are restricted configurations in an untrusted workspace. A target outside the workspace is confirmed once per exact path and remembered in workspace state.
 
 ## VS Code layer
 
