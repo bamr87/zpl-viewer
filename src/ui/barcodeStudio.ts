@@ -1,14 +1,7 @@
 import * as vscode from 'vscode';
 import { LabelFormatId } from '../core/formats';
 import { renderWebviewHtml } from './webviewHtml';
-
-interface StudioMessage {
-  type: string;
-  snippet?: string;
-  data?: number[];
-  name?: string;
-  message?: string;
-}
+import { parseStudioMessage } from './webviewGuards';
 
 /**
  * Host for the barcode studio webview: a single panel that builds, validates
@@ -56,7 +49,7 @@ export class BarcodeStudioPanel {
       'studio.js',
     );
     this.disposables.push(
-      this.panel.webview.onDidReceiveMessage((message: StudioMessage) =>
+      this.panel.webview.onDidReceiveMessage((message: unknown) =>
         this.handleMessage(message, options),
       ),
     );
@@ -72,27 +65,29 @@ export class BarcodeStudioPanel {
   }
 
   private async handleMessage(
-    message: StudioMessage,
+    raw: unknown,
     options: { format?: LabelFormatId; data?: string },
   ): Promise<void> {
+    const message = parseStudioMessage(raw);
+    if (!message) {
+      return;
+    }
     switch (message.type) {
       case 'ready':
         this.initialize(options);
         break;
       case 'insert':
-        await insertSnippet(message.snippet ?? '');
+        await insertSnippet(message.snippet);
         break;
       case 'copy':
-        await vscode.env.clipboard.writeText(message.snippet ?? '');
+        await vscode.env.clipboard.writeText(message.snippet);
         void vscode.window.showInformationMessage('Barcode field copied.');
         break;
       case 'export-png':
-        await savePng(message.data ?? [], message.name ?? 'barcode.png');
+        await savePng(message.data, message.name);
         break;
       case 'error':
-        void vscode.window.showErrorMessage(
-          message.message ?? 'Barcode studio error.',
-        );
+        void vscode.window.showErrorMessage(message.message);
         break;
       default:
         break;

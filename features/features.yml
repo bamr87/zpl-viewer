@@ -22,7 +22,7 @@ features:
     description: "Syntax highlighting, hover docs, IntelliSense, outline/folding"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR3]
     surface: docs
     link: "src/providers"
     docs: "README.md"
@@ -31,7 +31,7 @@ features:
     description: "Live canvas preview with zoom and paging"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR4]
     surface: ui
     link: "src/previewPanel.ts"
     docs: "README.md"
@@ -40,7 +40,7 @@ features:
     description: "Templates, snippets and Barcode Studio (24 symbologies via bwip-js)"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR2]
     surface: infra
     link: "src/barcode"
     docs: "README.md"
@@ -49,7 +49,7 @@ features:
     description: "Formatters, image import, format conversion; all ZPL graphic encodings"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR5]
     surface: infra
     link: "src/formatting.ts"
     docs: "README.md"
@@ -58,7 +58,7 @@ features:
     description: "Analysis: metrics, ink coverage, lint rules"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR2]
     surface: infra
     link: "src/analysis"
     docs: "README.md"
@@ -67,20 +67,65 @@ features:
     description: "Data merge of `{{placeholder}}` templates from CSV/TSV/JSON/JSONL"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR6]
     surface: infra
-    link: "src/importers"
+    link: "src/data"
     docs: "README.md"
   - id: ZPL-007
     title: "Deploy via raw TCP 9100"
     description: "Deploy via raw TCP 9100, device path or spool directory"
     implemented: true
     status: shipped
-    prd: [TBD]
+    prd: [FR7, NFR3]
     surface: infra
     link: "src/deploy"
     docs: "README.md"
   - id: ZPL-008
+    title: "Preview ↔ source navigation"
+    description: "Click an element in the preview to select its source; the preview follows the editor cursor to the label being edited and outlines the ops under it"
+    implemented: false
+    status: planned
+    prd: [FR8]
+    surface: ui
+    link: "src/previewPanel.ts"
+    docs: "PRD.md"
+  - id: ZPL-009
+    title: "Restricted Mode support"
+    description: "Offline features work in untrusted workspaces; deploy and workspace printer profiles need a trusted workspace"
+    implemented: false
+    status: planned
+    prd: [FR9]
+    surface: infra
+    link: "package.json"
+    docs: "PRD.md"
+  - id: ZPL-010
+    title: "Density and orientation transforms"
+    description: "Rewrite a label for another print density or rotate it 90/180/270 degrees, in ZPL II and EPL2, with every approximation reported"
+    implemented: false
+    status: planned
+    prd: [FR10]
+    surface: infra
+    link: "src/core/pipeline.ts"
+    docs: "PRD.md"
+  - id: ZPL-011
+    title: "Diagnostic quick fixes and rule explanations"
+    description: "Lint rule ids link to an explanation, and deterministic fixes are offered as VS Code quick fixes"
+    implemented: false
+    status: planned
+    prd: [FR11]
+    surface: ui
+    link: "src/diagnostics.ts"
+    docs: "PRD.md"
+  - id: ZPL-012
+    title: "PDF sheet layout"
+    description: "Export labels onto Letter/Legal/A4/A5/A6 pages as an N×M grid with alignment and an optional cut border"
+    implemented: false
+    status: planned
+    prd: [FR12]
+    surface: infra
+    link: "src/webview/main.ts"
+    docs: "PRD.md"
+  - id: ZPL-013
     title: "Missions in constitution §1"
     description: "Three product missions under one direction statement, ratified through amendment 0002."
     implemented: false

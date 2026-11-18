@@ -12,17 +12,21 @@ import { makeExportMessage, makeRenderMessage } from '../helpers/messages';
  * page from the shipped HTML makes that impossible: the e2e suite always drives
  * the toolbar users actually get.
  *
- * Two substitutions make it loadable over `file://`: the webview placeholders
- * are filled in, and the Content-Security-Policy meta is dropped because it
- * names `vscode-resource` origins that do not exist outside a webview.
+ * The webview placeholders are filled in so it loads over `file://`, and the
+ * shipped Content-Security-Policy is KEPT: `{{cspSource}}` becomes `'self'`
+ * and `{{nonce}}` a fixed test nonce, which the host-API stub carries too. So
+ * every e2e spec proves the bundle runs under the real policy — no
+ * `'unsafe-eval'`, scripts only by nonce.
  */
+export const HARNESS_NONCE = 'test';
+
 export function harnessFileUrl(): string {
   const previewHtml = fs.readFileSync(
     path.resolve(process.cwd(), 'src/webview/preview.html'),
     'utf8',
   );
 
-  const stub = `<script>
+  const stub = `<script nonce="${HARNESS_NONCE}">
     window.__hostMessages = [];
     window.acquireVsCodeApi = function () {
       return {
@@ -34,10 +38,10 @@ export function harnessFileUrl(): string {
   </script>`;
 
   const html = previewHtml
-    .replace(/<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/, '')
-    .replace(/\{\{nonce\}\}/g, 'test')
+    .replace(/\{\{cspSource\}\}/g, "'self'")
+    .replace(/\{\{nonce\}\}/g, HARNESS_NONCE)
     .replace('{{scriptUri}}', '../../../dist/webview/preview.js')
-    .replace('<script nonce="test"', `${stub}\n    <script nonce="test"`);
+    .replace(`<script nonce="${HARNESS_NONCE}"`, `${stub}\n    <script nonce="${HARNESS_NONCE}"`);
 
   // Written beside the source harness so the relative script path resolves.
   const generated = path.resolve(process.cwd(), 'src/test/e2e/harness.generated.html');

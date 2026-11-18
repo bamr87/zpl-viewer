@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { LabelFormatId, detectFormat, isLabelFormatId } from './core/formats';
 import { Density, parseDensity } from './core/units';
 import { PrinterProfile, normalizePrinters } from './deploy/printers';
+import { SettingOrigin, settingOrigin } from './deploy/trust';
 
 export const CONFIG_SECTION = 'labelStudio';
 export const LEGACY_CONFIG_SECTION = 'zplViewer';
@@ -124,6 +125,44 @@ export function getPrinters(): PrinterProfile[] {
   return normalizePrinters(getSetting<unknown[]>('printers', []));
 }
 
+/**
+ * The printers, plus the settings layer they came from. A workspace can define
+ * printers in `.vscode/settings.json`, and Deploy treats those with suspicion.
+ * Follows the same modern → legacy key choice as {@link getSetting}.
+ */
+export function getPrintersWithOrigin(): {
+  printers: PrinterProfile[];
+  origin: SettingOrigin;
+} {
+  const config = vscode.workspace.getConfiguration();
+  const modernKey = `${CONFIG_SECTION}.printers`;
+  const legacyKey = `${LEGACY_CONFIG_SECTION}.printers`;
+  const modern = config.inspect<unknown[]>(modernKey);
+  const key =
+    hasExplicitValue(modern) || !hasExplicitValue(config.inspect<unknown[]>(legacyKey))
+      ? modernKey
+      : legacyKey;
+  return {
+    printers: getPrinters(),
+    origin: settingOrigin(config.inspect<unknown[]>(key)),
+  };
+}
+
+/**
+ * Reads a setting from the user's own settings only, ignoring any workspace
+ * value — for settings a workspace must not be able to turn off. Honours the
+ * legacy key the same way {@link getSetting} does.
+ */
+function getUserSetting<T>(key: string, fallback: T): T {
+  const config = vscode.workspace.getConfiguration();
+  const modern = config.inspect<T>(`${CONFIG_SECTION}.${key}`)?.globalValue;
+  if (modern !== undefined) {
+    return modern;
+  }
+  const legacy = config.inspect<T>(`${LEGACY_CONFIG_SECTION}.${key}`)?.globalValue;
+  return legacy !== undefined ? legacy : fallback;
+}
+
 export function getMergeConfig(): { maxRows: number } {
   return { maxRows: getSetting<number>('merge.maxRows', 500) };
 }
@@ -153,7 +192,8 @@ export function getDeployConfig(): {
   timeoutMs: number;
 } {
   return {
-    confirmBeforeSend: getSetting<boolean>('deploy.confirmBeforeSend', true),
+    // Application-scoped: a workspace cannot switch the confirmation off.
+    confirmBeforeSend: getUserSetting<boolean>('deploy.confirmBeforeSend', true),
     timeoutMs: getSetting<number>('deploy.timeoutMs', 10000),
   };
 }
