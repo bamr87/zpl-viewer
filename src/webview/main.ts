@@ -37,6 +37,8 @@ interface ExportMessage {
   /** Printer language of the document being exported. */
   labelFormat?: LabelFormatId;
   requestId: string;
+  /** Which label a PNG export renders; 0 when absent. */
+  pageIndex?: number;
   source: string;
   options: {
     dpmm: number;
@@ -124,6 +126,45 @@ try {
 let lastResult: RenderResult | undefined;
 let lastScale = 2;
 let currentPage = 0;
+let lastReported: { page: number; scale: number } | undefined;
+
+interface SavedViewState {
+  page: number;
+  scale: number;
+}
+
+/** Tells the host which label is showing and the zoom, when either changed. */
+function reportViewState(): void {
+  if (
+    lastReported &&
+    lastReported.page === currentPage &&
+    lastReported.scale === lastScale
+  ) {
+    return;
+  }
+  lastReported = { page: currentPage, scale: lastScale };
+  postToHost({ type: 'view-state', page: currentPage, scale: lastScale });
+  vscodeApi?.setState({ page: currentPage, scale: lastScale });
+}
+
+// A reloaded webview starts from what it saved, and tells the host so the next
+// render does not undo it.
+let savedView: SavedViewState | undefined;
+try {
+  const saved = vscodeApi?.getState<Partial<SavedViewState>>();
+  if (
+    saved &&
+    typeof saved.page === 'number' &&
+    Number.isInteger(saved.page) &&
+    saved.page >= 0 &&
+    typeof saved.scale === 'number' &&
+    saved.scale > 0
+  ) {
+    savedView = { page: saved.page, scale: saved.scale };
+  }
+} catch {
+  // No saved state; start fresh.
+}
 
 window.addEventListener('message', (ev: MessageEvent<IncomingMessage>) => {
   const msg = ev.data;
@@ -184,11 +225,15 @@ function renderDocument(msg: RenderMessage): void {
       widthInches: msg.options.widthInches,
       heightInches: msg.options.heightInches,
     });
+    // The first render after a reload prefers what this webview saved; every
+    // later render follows the host, which echoes back what we last reported.
+    const wanted = savedView ?? { page: msg.pageIndex, scale: msg.options.scale };
+    savedView = undefined;
     currentPage = Math.min(
-      Math.max(0, msg.pageIndex),
+      Math.max(0, wanted.page),
       Math.max(0, lastResult.pages.length - 1),
     );
-    lastScale = msg.options.scale;
+    lastScale = wanted.scale;
     paint();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -235,7 +280,7 @@ function paint(): void {
   status.textContent = lastResult.warnings.length
     ? `${lastResult.warnings.length} warning${lastResult.warnings.length === 1 ? '' : 's'}: ${lastResult.warnings[0]}`
     : `${page.ops.length} op${page.ops.length === 1 ? '' : 's'}  @  ${page.width}×${page.height} dots  ·  scale ${scale.toFixed(2)}x`;
-  vscodeApi?.setState({ page: currentPage, scale });
+  reportViewState();
 }
 
 async function handleExport(msg: ExportMessage): Promise<void> {
@@ -259,7 +304,7 @@ async function handleExport(msg: ExportMessage): Promise<void> {
     }
     const data =
       msg.format === 'png'
-        ? await exportPng(result, barcodes)
+        ? await exportPng(result, barcodes, msg.pageIndex ?? 0)
         : await exportPdf(result, barcodes);
     postToHost({
       type: 'export-result',
@@ -279,8 +324,10 @@ async function handleExport(msg: ExportMessage): Promise<void> {
 async function exportPng(
   result: RenderResult,
   barcodes: BwipBarcodeRenderer,
+  pageIndex: number,
 ): Promise<number[]> {
-  const page = result.pages[0];
+  const page =
+    result.pages[Math.min(Math.max(0, pageIndex), result.pages.length - 1)];
   const off = document.createElement('canvas');
   off.width = page.width;
   off.height = page.height;

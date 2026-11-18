@@ -32,6 +32,7 @@ export function isAllowedPreviewCommand(command: unknown): command is string {
 export type PreviewMessage =
   | { type: 'ready' }
   | { type: 'refresh-request' }
+  | { type: 'view-state'; page: number; scale: number }
   | { type: 'log'; level: string; message: string; detail?: string }
   | { type: 'run-command'; command: string }
   | { type: 'export-result'; requestId: string; data: number[] }
@@ -73,6 +74,18 @@ export function parsePreviewMessage(raw: unknown): PreviewMessage | undefined {
     case 'ready':
     case 'refresh-request':
       return { type: raw.type };
+    case 'view-state':
+      // Which label is showing and how far it is zoomed, so the host can send
+      // them back on the next render instead of snapping to label 1.
+      return typeof raw.page === 'number' &&
+        Number.isInteger(raw.page) &&
+        raw.page >= 0 &&
+        typeof raw.scale === 'number' &&
+        Number.isFinite(raw.scale) &&
+        raw.scale > 0 &&
+        raw.scale <= 64
+        ? { type: 'view-state', page: raw.page, scale: raw.scale }
+        : undefined;
     case 'log':
       if (!optionalString(raw.level) || !optionalString(raw.message) || !optionalString(raw.detail)) {
         return undefined;
