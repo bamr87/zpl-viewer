@@ -1,0 +1,18 @@
+# ZPL-003: Barcode Studio encodes a Code 128 payload and emits a printable field.
+# Mirrors src/test/e2e/studio.spec.ts against the static studio harness page.
+id: studio-code128
+feature: ZPL-003
+title: "Barcode Studio encodes Code 128"
+description: "Pick Code 128, type a payload, and see the ZPL snippet with ^BC and the data."
+viewports: [desktop]
+ignore_console: ["favicon"]
+steps:
+  - goto: /src/test/e2e/studio-harness.html
+  - expect: { status: 200 }
+  - select: { selector: "#symbology", value: "code128" }
+  - fill: { selector: "#data", value: "LABELSTUDIO-1" }
+  - wait: { selector: "#snippet" }
+  - expect: { text: "^BC" }
+  - expect: { text: "LABELSTUDIO-1" }
+  - screenshot: studio
+  - expect: { no_console_errors: true }

@@ -1023,7 +1023,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.4.0",
     "webpack": "^5.90.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "yaml": "^2.9.1"
   },
   "dependencies": {
     "bwip-js": "^4.10.1",

@@ -36,7 +36,7 @@ Docs gates: `python3 tools/unwrap-prose.py --check` (one paragraph per line) and
 | `syntaxes/`, `snippets/`, `language-configuration*.json` | TextMate grammars, snippets and editor behaviour for ZPL and EPL |
 | `samples/` | Example labels and a sample data source (opened by the Run Extension launch config) |
 | `docs/` | Docs index, ADRs (`docs/adr/`), the testing guide, and generated reference (`docs/reference/`) |
-| `scripts/` | Node maintenance scripts: `gen-reference-docs.mjs`, `smoke-test.mjs` |
+| `scripts/` | Node maintenance scripts: `gen-reference-docs.mjs`, `gen-verify-harness.mjs` (the preview harness page for e2e and the verify kit), `smoke-test.mjs` |
 | `tools/` | Vendored fleet tools (`unwrap-prose.py`, `docs_index.py`) |
 | `features/`, `verify/` | Feature index (`features/v1`) and the user-scenario verification kit |
 | `public/` | Vendored fleet feedback widget scripts |

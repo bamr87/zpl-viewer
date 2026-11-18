@@ -1,0 +1,34 @@
+# ZPL-002: the live preview draws a label when the host sends it a render message.
+# The page is src/test/e2e/harness.generated.html (scripts/gen-verify-harness.mjs):
+# the shipped preview.html and bundle with a stub for the VS Code host API. The
+# `eval` step stands in for the host and posts the same message shape as
+# src/test/helpers/messages.ts makeRenderMessage, carrying samples/hello.zpl.
+id: preview-renders-hello
+feature: ZPL-002
+title: "Preview renders samples/hello.zpl"
+description: "Open the preview, send it the sample label, and see the label canvas and the page indicator."
+viewports: [desktop]
+ignore_console: ["favicon"]
+steps:
+  - goto: /src/test/e2e/harness.generated.html
+  - expect: { status: 200 }
+  - eval:
+      name: render-posted
+      script: |
+        (() => {
+          const source = '^XA\n^CF0,60\n^FO50,50^FDHello, ZPL!^FS\n^CF0,30\n^FO50,130^FDThis is a sample label.^FS\n^FO50,180^GB700,3,3^FS\n^FO50,210^BY3,3,120\n^BCN,120,Y,N,N\n^FD1234567890^FS\n^XZ';
+          window.dispatchEvent(new MessageEvent('message', { data: {
+            type: 'render',
+            source,
+            options: { dpmm: 8, widthInches: 4, heightInches: 6, scale: 1 },
+            pageIndex: 0,
+          } }));
+          return true;
+        })()
+  - expect: { visible: "#label" }
+  - expect: { text: "1 / 1" }
+  - eval:
+      name: canvas-width
+      script: "document.getElementById('label').width"
+  - screenshot: preview
+  - expect: { no_console_errors: true }
