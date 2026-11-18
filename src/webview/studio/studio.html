@@ -48,7 +48,7 @@
       button {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
-        border: none;
+        border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
         padding: 6px 12px;
         border-radius: 2px;
         cursor: pointer;
@@ -60,6 +60,13 @@
         border: 1px solid var(--vscode-panel-border);
       }
       button:hover { background: var(--vscode-button-hoverBackground); }
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder, Highlight);
+        outline-offset: 2px;
+      }
       .actions { display: flex; gap: 8px; flex-wrap: wrap; }
       .preview {
         background: #ffffff;
