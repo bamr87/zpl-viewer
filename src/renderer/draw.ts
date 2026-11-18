@@ -18,6 +18,7 @@ import {
   TextOp,
 } from './ir';
 import { glyphXScale } from './text';
+import { MAX_GRAPHIC_DOTS } from '../core/limits';
 
 /** Minimal bwip-js toCanvas-ish contract used by the renderer. */
 export interface BarcodeRenderer {
@@ -316,12 +317,20 @@ function drawImage(ctx: CanvasRenderingContext2D, op: ImageOp): void {
   }
   ctx.fillStyle = inverted ? '#ffffff' : '#000000';
 
-  for (let row = 0; row < op.height; row += 1) {
+  // Walk only what the bitmap holds: past its last byte every dot is blank, so
+  // a field that declares a vast area costs no more than the data it carries.
+  const rows = Math.min(
+    op.height,
+    MAX_GRAPHIC_DOTS,
+    Math.ceil(op.bitmap.length / Math.max(1, op.bytesPerRow)),
+  );
+  const cols = Math.min(op.width, MAX_GRAPHIC_DOTS, op.bytesPerRow * 8);
+  for (let row = 0; row < rows; row += 1) {
     const rowStart = row * op.bytesPerRow;
     let runStart = -1;
-    for (let col = 0; col <= op.width; col += 1) {
+    for (let col = 0; col <= cols; col += 1) {
       let on = false;
-      if (col < op.width) {
+      if (col < cols) {
         const byte = op.bitmap[rowStart + (col >> 3)] ?? 0;
         on = ((byte >> (7 - (col & 7))) & 1) === 1;
       }
