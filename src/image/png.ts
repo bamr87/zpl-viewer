@@ -12,6 +12,7 @@
  */
 
 import { inflate } from '../core/inflate';
+import { MAX_IMAGE_PIXELS } from '../core/limits';
 import { DecodedImage } from './types';
 
 export type { DecodedImage };
@@ -173,6 +174,11 @@ export function decodePng(bytes: Uint8Array): DecodedImage {
   if (width === 0 || height === 0) {
     throw new Error('PNG has no IHDR chunk.');
   }
+  if (width * height > MAX_IMAGE_PIXELS) {
+    throw new Error(
+      `PNG is ${width} x ${height}, over the limit of ${MAX_IMAGE_PIXELS} pixels.`,
+    );
+  }
   if (idat.length === 0) {
     throw new Error('PNG has no image data.');
   }
@@ -187,10 +193,13 @@ export function decodePng(bytes: Uint8Array): DecodedImage {
     compressed.set(chunk, compressedOffset);
     compressedOffset += chunk.length;
   }
-  const raw = inflate(compressed);
 
   const channels = samplesPerPixel(colorType);
   const bitsPerPixel = channels * bitDepth;
+  // The IHDR says how much data the image can hold, so a stream that inflates
+  // past that (plus Adam7's extra per-pass filter bytes) is a decompression bomb.
+  const rowBytes = Math.ceil((width * bitsPerPixel) / 8) + 1;
+  const raw = inflate(compressed, { maxOutput: (2 * height + 7) * rowBytes });
   const bytesPerPixel = Math.max(1, Math.ceil(bitsPerPixel / 8));
 
   const rgba = new Uint8Array(width * height * 4);

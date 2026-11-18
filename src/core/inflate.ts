@@ -7,6 +7,15 @@
  * come from here. It is small: a graphic field is at most a few hundred KB.
  */
 
+import { InflateLimitError } from './limits';
+
+export { InflateLimitError };
+
+export interface InflateOptions {
+  /** Throw `InflateLimitError` once the output would pass this many bytes. */
+  maxOutput?: number;
+}
+
 /** Repeat lengths 257-285 and the extra bits each carries. */
 const LENGTH_BASE = [
   3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67,
@@ -116,11 +125,17 @@ class ByteSink {
   private buffer: Uint8Array;
   length = 0;
 
-  constructor(initial = 1024) {
-    this.buffer = new Uint8Array(initial);
+  constructor(
+    initial = 1024,
+    private readonly maxOutput = Infinity,
+  ) {
+    this.buffer = new Uint8Array(Math.min(initial, Math.max(1, maxOutput)));
   }
 
   private ensure(extra: number): void {
+    if (this.length + extra > this.maxOutput) {
+      throw new InflateLimitError(this.maxOutput);
+    }
     if (this.length + extra <= this.buffer.length) {
       return;
     }
@@ -128,6 +143,7 @@ class ByteSink {
     while (size < this.length + extra) {
       size *= 2;
     }
+    size = Math.min(size, Math.max(this.maxOutput, this.length + extra));
     const grown = new Uint8Array(size);
     grown.set(this.buffer.subarray(0, this.length));
     this.buffer = grown;
@@ -224,9 +240,15 @@ function readDynamicTables(reader: BitReader): {
 }
 
 /** Decompresses a raw DEFLATE stream (no zlib or gzip wrapper). */
-export function inflateRaw(input: Uint8Array): Uint8Array {
+export function inflateRaw(
+  input: Uint8Array,
+  options: InflateOptions = {},
+): Uint8Array {
   const reader = new BitReader(input);
-  const out = new ByteSink(Math.max(1024, input.length * 4));
+  const out = new ByteSink(
+    Math.max(1024, input.length * 4),
+    options.maxOutput ?? Infinity,
+  );
 
   for (;;) {
     const final = reader.bits(1);
@@ -285,7 +307,10 @@ export function inflateRaw(input: Uint8Array): Uint8Array {
  * raw DEFLATE stream when the two-byte header is not a valid zlib header, which
  * is what some printer capture tools produce.
  */
-export function inflate(input: Uint8Array): Uint8Array {
+export function inflate(
+  input: Uint8Array,
+  options: InflateOptions = {},
+): Uint8Array {
   if (input.length < 2) {
     throw new Error('Compressed data is too short to be a zlib stream.');
   }
@@ -293,5 +318,5 @@ export function inflate(input: Uint8Array): Uint8Array {
   const flg = input[1];
   const looksLikeZlib =
     (cmf & 0x0f) === 8 && ((cmf << 8) | flg) % 31 === 0 && (flg & 0x20) === 0;
-  return inflateRaw(looksLikeZlib ? input.subarray(2) : input);
+  return inflateRaw(looksLikeZlib ? input.subarray(2) : input, options);
 }

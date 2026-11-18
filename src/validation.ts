@@ -1,5 +1,13 @@
 import { tokenize } from './zplParser';
 import { findCommand } from './zplCommands';
+import { graphicLimitProblem } from './core/limits';
+
+/** Where each graphic command declares its total byte count and bytes per row. */
+const GRAPHIC_SIZE_ARGS: Record<string, { total: number; perRow: number }> = {
+  '^GF': { total: 2, perRow: 3 },
+  '~DG': { total: 1, perRow: 2 },
+  '~DY': { total: 3, perRow: 4 },
+};
 
 export type DiagnosticSeverityName = 'warning' | 'information';
 
@@ -67,6 +75,23 @@ export function validateZpl(text: string): ZplValidationDiagnostic[] {
         }
       }
       continue;
+    }
+
+    const graphicArgs = GRAPHIC_SIZE_ARGS[token.command];
+    if (graphicArgs) {
+      const total = parseInt(token.args[graphicArgs.total] ?? '0', 10) || 0;
+      const perRow = parseInt(token.args[graphicArgs.perRow] ?? '0', 10) || 0;
+      // `~DY` can store a PNG, whose declared size is its file size, so only
+      // the byte caps apply there; a bitmap command is also held to its rows.
+      const problem = graphicLimitProblem(perRow, total);
+      if (problem) {
+        diagnostics.push({
+          start: token.start,
+          end: token.end,
+          message: `\`${token.command}\` graphic is too large to preview and will be skipped: ${problem}`,
+          severity: 'warning',
+        });
+      }
     }
 
     if (token.command === '^FD') {

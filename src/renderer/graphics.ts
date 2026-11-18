@@ -16,13 +16,23 @@
  */
 
 import { base64Decode } from '../core/base64';
-import { inflate } from '../core/inflate';
+import { InflateLimitError, inflate } from '../core/inflate';
+import {
+  MAX_GRAPHIC_BYTES,
+  MAX_GRAPHIC_DOTS,
+  graphicLimitProblem,
+} from '../core/limits';
 
 export interface DecodedGraphic {
   bytes: Uint8Array;
   bytesPerRow: number;
   rows: number;
   warnings: string[];
+  /**
+   * True when the graphic was over the size limits and nothing was decoded:
+   * `bytes` is empty and `rows` is 0, and `warnings` says why.
+   */
+  rejected?: boolean;
 }
 
 /** A bitmap held in printer memory by `~DG`/`~DY`, recalled by `^XG`. */
@@ -108,7 +118,10 @@ function nibblesToBytes(rows: string[], bytesPerRow: number): Uint8Array {
 export function decodeAsciiHexGraphic(
   data: string,
   bytesPerRow: number,
-): { bytes: Uint8Array; rows: number } {
+  maxBytes: number = Infinity,
+): { bytes: Uint8Array; rows: number; truncated?: boolean } {
+  const maxRows = Math.floor(maxBytes / Math.max(1, bytesPerRow));
+  let truncated = false;
   const rowNibbles = Math.max(2, bytesPerRow * 2);
   const rows: string[] = [];
   let current = '';
@@ -119,11 +132,15 @@ export function decodeAsciiHexGraphic(
   let rowJustFilled = false;
 
   const flush = (row: string): void => {
+    if (rows.length >= maxRows) {
+      truncated = true;
+      return;
+    }
     rows.push(row.length >= rowNibbles ? row.slice(0, rowNibbles) : row.padEnd(rowNibbles, '0'));
     current = '';
   };
 
-  for (let i = 0; i < data.length; i += 1) {
+  for (let i = 0; i < data.length && !truncated; i += 1) {
     const ch = data[i];
 
     if (ch === ' ' || ch === '\r' || ch === '\n' || ch === '\t') {
@@ -153,6 +170,10 @@ export function decodeAsciiHexGraphic(
       if (current.length > 0) {
         flush(current);
       }
+      if (rows.length >= maxRows) {
+        truncated = true;
+        continue;
+      }
       rows.push(rows.length > 0 ? rows[rows.length - 1] : '0'.repeat(rowNibbles));
       rowJustFilled = false;
       pendingCount = 0;
@@ -173,7 +194,7 @@ export function decodeAsciiHexGraphic(
     const repeats = pendingCount > 0 ? pendingCount : 1;
     pendingCount = 0;
     rowJustFilled = false;
-    for (let n = 0; n < repeats; n += 1) {
+    for (let n = 0; n < repeats && !truncated; n += 1) {
       current += ch.toUpperCase();
       if (current.length >= rowNibbles) {
         flush(current);
@@ -186,7 +207,7 @@ export function decodeAsciiHexGraphic(
     flush(current);
   }
 
-  return { bytes: nibblesToBytes(rows, bytesPerRow), rows: rows.length };
+  return { bytes: nibblesToBytes(rows, bytesPerRow), rows: rows.length, truncated };
 }
 
 /**
@@ -196,7 +217,8 @@ export function decodeAsciiHexGraphic(
 function decodeBase64Wrapper(
   data: string,
   warnings: string[],
-): Uint8Array | undefined {
+  maxBytes: number,
+): Uint8Array | undefined | 'too-large' {
   const match = /:(B64|Z64):([^:]*)(?::([0-9A-Fa-f]{1,4}))?/.exec(data);
   if (!match) {
     return undefined;
@@ -221,11 +243,14 @@ function decodeBase64Wrapper(
 
   const raw = base64Decode(payload);
   if (scheme === 'B64') {
-    return raw;
+    return raw.length > maxBytes ? 'too-large' : raw;
   }
   try {
-    return inflate(raw);
+    return inflate(raw, { maxOutput: maxBytes });
   } catch (err) {
+    if (err instanceof InflateLimitError) {
+      return 'too-large';
+    }
     const message = err instanceof Error ? err.message : String(err);
     warnings.push(`Failed to decompress a :Z64: graphic (${message}).`);
     return undefined;
@@ -241,6 +266,25 @@ export interface GraphicDataInput {
   bytesPerRow: number;
   /** Total byte count, as declared by the command (0 when unknown). */
   totalBytes?: number;
+  /**
+   * Largest decoded bitmap to accept, for a per-label or per-store budget.
+   * Defaults to, and is capped at, `MAX_GRAPHIC_BYTES`.
+   */
+  maxBytes?: number;
+  /**
+   * The payload is an opaque byte stream (a PNG stored by `~DY`), not a bitmap,
+   * so the row-count limit does not apply to it.
+   */
+  opaque?: boolean;
+}
+
+function rejectGraphic(
+  bytesPerRow: number,
+  warnings: string[],
+  reason: string,
+): DecodedGraphic {
+  warnings.push(`Graphic skipped: ${reason}`);
+  return { bytes: new Uint8Array(0), bytesPerRow, rows: 0, warnings, rejected: true };
 }
 
 /**
@@ -254,7 +298,26 @@ export function decodeGraphicData(input: GraphicDataInput): DecodedGraphic {
   const bytesPerRow = Math.max(1, Math.floor(input.bytesPerRow));
   const compression = (input.compression || 'A').toUpperCase();
 
-  let bytes: Uint8Array | undefined = decodeBase64Wrapper(input.data, warnings);
+  const maxBytes = Math.max(0, Math.min(input.maxBytes ?? MAX_GRAPHIC_BYTES, MAX_GRAPHIC_BYTES));
+  const declared = input.totalBytes && input.totalBytes > 0 ? input.totalBytes : 0;
+  const problem = graphicLimitProblem(bytesPerRow, declared, maxBytes);
+  if (problem) {
+    return rejectGraphic(bytesPerRow, warnings, problem);
+  }
+
+  if (!input.opaque && declared / bytesPerRow > MAX_GRAPHIC_DOTS + 0.5) {
+    return rejectGraphic(
+      bytesPerRow,
+      warnings,
+      `${Math.round(declared / bytesPerRow)} rows exceeds the limit of ${MAX_GRAPHIC_DOTS}.`,
+    );
+  }
+
+  const wrapped = decodeBase64Wrapper(input.data, warnings, maxBytes);
+  if (wrapped === 'too-large') {
+    return rejectGraphic(bytesPerRow, warnings, `decoded data exceeds the limit of ${maxBytes} bytes.`);
+  }
+  let bytes: Uint8Array | undefined = wrapped;
 
   if (!bytes) {
     if (compression === 'B') {
@@ -264,7 +327,14 @@ export function decodeGraphicData(input: GraphicDataInput): DecodedGraphic {
       }
       bytes = buf;
     } else {
-      bytes = decodeAsciiHexGraphic(input.data, bytesPerRow).bytes;
+      const hex = decodeAsciiHexGraphic(input.data, bytesPerRow, maxBytes);
+      if (hex.truncated) {
+        return rejectGraphic(bytesPerRow, warnings, `decoded data exceeds the limit of ${maxBytes} bytes.`);
+      }
+      bytes = hex.bytes;
+    }
+    if (bytes.length > maxBytes) {
+      return rejectGraphic(bytesPerRow, warnings, `decoded data exceeds the limit of ${maxBytes} bytes.`);
     }
   }
 
@@ -274,6 +344,13 @@ export function decodeGraphicData(input: GraphicDataInput): DecodedGraphic {
       : 0;
   const decodedRows = Math.floor(bytes.length / bytesPerRow);
   let rows = declaredRows > 0 ? declaredRows : decodedRows;
+  if (!input.opaque && rows > MAX_GRAPHIC_DOTS) {
+    return rejectGraphic(
+      bytesPerRow,
+      warnings,
+      `${rows} rows exceeds the limit of ${MAX_GRAPHIC_DOTS}.`,
+    );
+  }
 
   if (rows <= 0) {
     rows = Math.max(1, decodedRows);
