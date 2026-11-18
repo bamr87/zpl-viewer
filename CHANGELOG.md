@@ -2,6 +2,18 @@
 
 All notable changes to the Label Studio extension (formerly ZPL Viewer) will be documented in this file.
 
+## [0.3.1](https://github.com/bamr87/zpl-viewer/compare/zpl-viewer-v0.3.0...zpl-viewer-v0.3.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci:** bump Playwright to 1.65 for the ubuntu-26.04 runner ([debbd56](https://github.com/bamr87/zpl-viewer/commit/debbd56565072d9e68b8377f75c1848dcc91475e))
+* **ci:** bump Playwright to 1.65 for the ubuntu-26.04 runner ([f7b6a78](https://github.com/bamr87/zpl-viewer/commit/f7b6a780c26a4172f59c53e696aaedcdd970d9fd))
+* **deploy:** stop workspace settings from silently writing files ([95ade0c](https://github.com/bamr87/zpl-viewer/commit/95ade0ca22b7506a91d0348331093ec4ef89b159)), closes [#49](https://github.com/bamr87/zpl-viewer/issues/49)
+* **deploy:** workspace-defined printers always confirm; app-scoped confirmBeforeSend; resolved paths ([a91984d](https://github.com/bamr87/zpl-viewer/commit/a91984da783e573afa00293f4b06ce05b8cd9a97))
+* **webview:** drop unsafe-eval, crypto nonce, validated webview messages ([b9aefcc](https://github.com/bamr87/zpl-viewer/commit/b9aefccb0bf9724e673232740f06c6d1e284db97))
+* **webview:** harden the webview trust boundary ([1324fae](https://github.com/bamr87/zpl-viewer/commit/1324fae332b77fa959f2e373659ee85817e19a1e)), closes [#52](https://github.com/bamr87/zpl-viewer/issues/52)
+
 ## [0.3.0](https://github.com/bamr87/zpl-viewer/compare/zpl-viewer-v0.2.0...zpl-viewer-v0.3.0) (2026-10-31)
 
 
