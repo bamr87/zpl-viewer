@@ -15,7 +15,7 @@ A VS Code extension for everything that happens to a thermal label before it com
 | Verb | What you get |
 |---|---|
 | **Read** | Syntax highlighting, hover docs, IntelliSense, outline and folding for ZPL II and EPL2. |
-| **View** | Live label preview on a `<canvas>`, page navigation, zoom, PNG/PDF/SVG export. |
+| **View** | Live label preview on a `<canvas>`, page navigation, zoom (kept across edits and refreshes), PNG (the label showing, or a pick) / PDF / SVG export. |
 | **Create** | Starter templates (shipping, product, asset tag, shelf, GS1 carton), snippets, a barcode studio. |
 | **Modify** | Formatters for both languages, barcode field insertion, image import, format conversion. |
 | **Graphics** | Every ZPL graphic encoding renders: ASCII hex, Zebra's compressed hex, `:B64:` and `:Z64:`, plus `~DG`/`~DY` downloads recalled with `^XG`/`^IM`. |
