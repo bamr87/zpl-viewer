@@ -137,30 +137,81 @@ window.addEventListener('message', (ev: MessageEvent<IncomingMessage>) => {
   }
 });
 
+function nextPage(): void {
+  if (lastResult && currentPage < lastResult.pages.length - 1) {
+    currentPage += 1;
+    paint();
+  }
+}
+
+function previousPage(): void {
+  if (currentPage > 0) {
+    currentPage -= 1;
+    paint();
+  }
+}
+
+function zoomIn(): void {
+  lastScale = Math.min(6, lastScale * 1.25);
+  paint();
+}
+
+function zoomOut(): void {
+  lastScale = Math.max(0.25, lastScale / 1.25);
+  paint();
+}
+
+function zoomReset(): void {
+  lastScale = 2;
+  paint();
+}
+
+// Keyboard paging and zoom while the preview has focus: PageUp/PageDown or
+// Alt+Left/Right for labels, Ctrl/Cmd with + - 0 for zoom.
+window.addEventListener('keydown', (ev: KeyboardEvent) => {
+  const target = ev.target as HTMLElement | null;
+  if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+    return;
+  }
+  const mod = ev.ctrlKey || ev.metaKey;
+  let handled = true;
+  if (!mod && !ev.altKey && ev.key === 'PageDown') {
+    nextPage();
+  } else if (!mod && !ev.altKey && ev.key === 'PageUp') {
+    previousPage();
+  } else if (ev.altKey && !mod && ev.key === 'ArrowRight') {
+    nextPage();
+  } else if (ev.altKey && !mod && ev.key === 'ArrowLeft') {
+    previousPage();
+  } else if (mod && (ev.key === '+' || ev.key === '=')) {
+    zoomIn();
+  } else if (mod && (ev.key === '-' || ev.key === '_')) {
+    zoomOut();
+  } else if (mod && ev.key === '0') {
+    zoomReset();
+  } else {
+    handled = false;
+  }
+  if (handled) {
+    ev.preventDefault();
+  }
+});
+
 document.querySelectorAll<HTMLButtonElement>('button[data-cmd]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const cmd = btn.dataset.cmd;
     if (cmd === 'next') {
-      if (lastResult && currentPage < lastResult.pages.length - 1) {
-        currentPage += 1;
-        paint();
-      }
+      nextPage();
     } else if (cmd === 'prev') {
-      if (currentPage > 0) {
-        currentPage -= 1;
-        paint();
-      }
+      previousPage();
     } else if (cmd === 'refresh') {
       postToHost({ type: 'refresh-request' });
     } else if (cmd === 'zoom-in') {
-      lastScale = Math.min(6, lastScale * 1.25);
-      paint();
+      zoomIn();
     } else if (cmd === 'zoom-out') {
-      lastScale = Math.max(0.25, lastScale / 1.25);
-      paint();
+      zoomOut();
     } else if (cmd === 'zoom-reset') {
-      lastScale = 2;
-      paint();
+      zoomReset();
     } else if (cmd === 'export-png') {
       postToHost({ type: 'run-command', command: 'labelStudio.exportPng' });
     } else if (cmd === 'export-pdf') {
@@ -210,6 +261,7 @@ function paint(): void {
     }
     status.textContent = 'no labels';
     pageLabel.textContent = '0 / 0';
+    canvas.setAttribute('aria-label', 'No renderable labels');
     return;
   }
   if (boot) {
@@ -232,6 +284,13 @@ function paint(): void {
     return;
   }
   pageLabel.textContent = `${currentPage + 1} / ${lastResult.pages.length}`;
+  const warningCount = lastResult.warnings.length;
+  canvas.setAttribute(
+    'aria-label',
+    `Label ${currentPage + 1} of ${lastResult.pages.length}, ${page.width} × ${page.height} dots, ` +
+      `${page.ops.length} element${page.ops.length === 1 ? '' : 's'}, ` +
+      `${warningCount} warning${warningCount === 1 ? '' : 's'}`,
+  );
   status.textContent = lastResult.warnings.length
     ? `${lastResult.warnings.length} warning${lastResult.warnings.length === 1 ? '' : 's'}: ${lastResult.warnings[0]}`
     : `${page.ops.length} op${page.ops.length === 1 ? '' : 's'}  @  ${page.width}×${page.height} dots  ·  scale ${scale.toFixed(2)}x`;
