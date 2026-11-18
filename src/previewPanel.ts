@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import { isLabelFormatId } from './core/formats';
 import {
   affectsLabelStudio,
@@ -7,18 +6,10 @@ import {
   getPreviewConfig,
   getRenderConfig,
 } from './config';
+import { renderWebviewHtml } from './ui/webviewHtml';
+import { parsePreviewMessage } from './ui/webviewGuards';
 
 export { getRenderConfig };
-
-function generateNonce(): string {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let s = '';
-  for (let i = 0; i < 32; i += 1) {
-    s += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return s;
-}
 
 /**
  * Manages the local-rendering preview webview. The webview owns the canvas
@@ -296,28 +287,22 @@ class LabelPreviewPanel {
     return promise;
   }
 
-  private handleMessage(msg: {
-    type: string;
-    requestId?: string;
-    data?: number[];
-    error?: string;
-    level?: string;
-    message?: string;
-    detail?: string;
-    command?: string;
-  }): void {
+  private handleMessage(raw: unknown): void {
+    const msg = parsePreviewMessage(raw);
+    if (!msg) {
+      const type = (raw as { type?: unknown } | null)?.type;
+      this.output.appendLine(`[preview] refused message ${JSON.stringify(type ?? null)}`);
+      return;
+    }
     switch (msg.type) {
       case 'run-command': {
         // The preview's toolbar runs host commands, so the buttons there stay
         // the same actions as the menus — and it passes its own document, since
         // clicking inside a webview leaves no active text editor to fall back
         // to.
-        const command = msg.command ?? '';
-        if (!command.startsWith('labelStudio.')) {
-          this.output.appendLine(`[preview] refused to run "${command}"`);
-          break;
-        }
-        void vscode.commands.executeCommand(command, this.document.uri);
+        // parsePreviewMessage already refused anything outside the toolbar's
+        // allowlist, so Deploy is out of reach from here.
+        void vscode.commands.executeCommand(msg.command, this.document.uri);
         break;
       }
       case 'ready':
@@ -329,8 +314,8 @@ class LabelPreviewPanel {
         void this.refresh();
         break;
       case 'log': {
-        const level = (msg.level ?? 'info').toUpperCase();
-        this.output.appendLine(`[preview:${level}] ${msg.message ?? ''}`);
+        const level = msg.level.toUpperCase();
+        this.output.appendLine(`[preview:${level}] ${msg.message}`);
         if (msg.detail) {
           this.output.appendLine(msg.detail);
         }
@@ -340,18 +325,18 @@ class LabelPreviewPanel {
         break;
       }
       case 'export-result': {
-        const req = this.pendingExports.get(msg.requestId ?? '');
-        if (req && msg.data) {
+        const req = this.pendingExports.get(msg.requestId);
+        if (req) {
           req.resolve(new Uint8Array(msg.data));
-          this.pendingExports.delete(msg.requestId ?? '');
+          this.pendingExports.delete(msg.requestId);
         }
         break;
       }
       case 'export-error': {
-        const req = this.pendingExports.get(msg.requestId ?? '');
+        const req = this.pendingExports.get(msg.requestId);
         if (req) {
-          req.reject(new Error(msg.error ?? 'Unknown export error.'));
-          this.pendingExports.delete(msg.requestId ?? '');
+          req.reject(new Error(msg.error));
+          this.pendingExports.delete(msg.requestId);
         }
         break;
       }
@@ -361,39 +346,12 @@ class LabelPreviewPanel {
   }
 
   private buildHtml(): string {
-    const htmlPath = vscode.Uri.joinPath(
+    return renderWebviewHtml(
+      this.panel.webview,
       this.context.extensionUri,
-      'dist',
-      'webview',
       'preview.html',
+      'preview.js',
     );
-    let html: string;
-    try {
-      html = fs.readFileSync(htmlPath.fsPath, 'utf8');
-    } catch {
-      return `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:16px">
-        <h3>Preview assets not found</h3>
-        <p>Expected <code>${htmlPath.fsPath}</code>.<br/>
-        Run <code>npm run compile</code> and reload the window.</p>
-        </body></html>`;
-    }
-    const scriptUri = this.panel.webview
-      .asWebviewUri(
-        vscode.Uri.joinPath(
-          this.context.extensionUri,
-          'dist',
-          'webview',
-          'preview.js',
-        ),
-      )
-      .toString();
-    const cspSource = this.panel.webview.cspSource;
-    const nonce = generateNonce();
-    // Use function replacers to avoid $ being interpreted in replacement text.
-    return html
-      .replace(/\{\{scriptUri\}\}/g, () => scriptUri)
-      .replace(/\{\{cspSource\}\}/g, () => cspSource)
-      .replace(/\{\{nonce\}\}/g, () => nonce);
   }
 
   private shortName(): string {

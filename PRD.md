@@ -42,19 +42,35 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 
 | ID | Feature | Status | Where | Requirements |
 | --- | --- | --- | --- | --- |
-| [ZPL-001](features/features.yml) | Syntax highlighting | shipped | [`src/providers`](src/providers) · [`README.md`](README.md) | TBD |
-| [ZPL-002](features/features.yml) | Live canvas preview with zoom and paging | shipped | [`src/previewPanel.ts`](src/previewPanel.ts) · [`README.md`](README.md) | TBD |
-| [ZPL-003](features/features.yml) | Templates, snippets and Barcode Studio | shipped | [`src/barcode`](src/barcode) · [`README.md`](README.md) | TBD |
-| [ZPL-004](features/features.yml) | Formatters, image import, format conversion | shipped | [`src/formatting.ts`](src/formatting.ts) · [`README.md`](README.md) | TBD |
-| [ZPL-005](features/features.yml) | Analysis: metrics, ink coverage, lint rules | shipped | [`src/analysis`](src/analysis) · [`README.md`](README.md) | TBD |
-| [ZPL-006](features/features.yml) | Data merge of {{placeholder}} templates from CSV/TSV/JSON/JSONL | shipped | [`src/importers`](src/importers) · [`README.md`](README.md) | TBD |
-| [ZPL-007](features/features.yml) | Deploy via raw TCP 9100 | shipped | [`src/deploy`](src/deploy) · [`README.md`](README.md) | TBD |
+| [ZPL-001](features/features.yml) | Syntax highlighting | shipped | [`src/providers`](src/providers) · [`README.md`](README.md) | FR3 |
+| [ZPL-002](features/features.yml) | Live canvas preview with zoom and paging | shipped | [`src/previewPanel.ts`](src/previewPanel.ts) · [`README.md`](README.md) | FR4 |
+| [ZPL-003](features/features.yml) | Templates, snippets and Barcode Studio | shipped | [`src/barcode`](src/barcode) · [`README.md`](README.md) | FR2 |
+| [ZPL-004](features/features.yml) | Formatters, image import, format conversion | shipped | [`src/formatting.ts`](src/formatting.ts) · [`README.md`](README.md) | FR5 |
+| [ZPL-005](features/features.yml) | Analysis: metrics, ink coverage, lint rules | shipped | [`src/analysis`](src/analysis) · [`README.md`](README.md) | FR2 |
+| [ZPL-006](features/features.yml) | Data merge of {{placeholder}} templates from CSV/TSV/JSON/JSONL | shipped | [`src/data`](src/data) · [`README.md`](README.md) | FR6 |
+| [ZPL-007](features/features.yml) | Deploy via raw TCP 9100 | shipped | [`src/deploy`](src/deploy) · [`README.md`](README.md) | FR7, NFR3 |
+| [ZPL-008](features/features.yml) | Preview ↔ source navigation | planned | [`src/previewPanel.ts`](src/previewPanel.ts) · [`PRD.md`](PRD.md) | FR8 |
+| [ZPL-009](features/features.yml) | Restricted Mode support | planned | [`package.json`](package.json) · [`PRD.md`](PRD.md) | FR9 |
+| [ZPL-010](features/features.yml) | Density and orientation transforms | planned | [`src/core/pipeline.ts`](src/core/pipeline.ts) · [`PRD.md`](PRD.md) | FR10 |
+| [ZPL-011](features/features.yml) | Diagnostic quick fixes and rule explanations | planned | [`src/diagnostics.ts`](src/diagnostics.ts) · [`PRD.md`](PRD.md) | FR11 |
+| [ZPL-012](features/features.yml) | PDF sheet layout | planned | [`src/webview/main.ts`](src/webview/main.ts) · [`PRD.md`](PRD.md) | FR12 |
 
 **Requirement → feature trace**
 
 | Requirement | Features |
 | --- | --- |
-| TBD | ZPL-001, ZPL-002, ZPL-003, ZPL-004, ZPL-005, ZPL-006, ZPL-007 |
+| FR3 | ZPL-001 |
+| FR4 | ZPL-002 |
+| FR2 | ZPL-003, ZPL-005 |
+| FR5 | ZPL-004 |
+| FR6 | ZPL-006 |
+| FR7 | ZPL-007 |
+| NFR3 | ZPL-007 |
+| FR8 | ZPL-008 |
+| FR9 | ZPL-009 |
+| FR10 | ZPL-010 |
+| FR11 | ZPL-011 |
+| FR12 | ZPL-012 |
 <!-- features:end -->
 
 ## 5. Requirements
@@ -63,6 +79,19 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 
 - FR1: `.prn`/`.lbl` files sniffed to detect language
 - FR2: Barcode payloads validated for charset, length, check digits, GS1 AI syntax and capacity
+- FR3: Editor language support for ZPL II and EPL2: syntax highlighting, hover docs, completion, outline and folding
+- FR4: Live canvas preview with zoom and paging, and export to PNG, PDF and SVG
+- FR5: Labels converted between ZPL II and EPL2 through the one shared drawing-op IR
+- FR6: `{{placeholder}}` templates merged with CSV/TSV/JSON/JSONL data
+- FR7: Deploy to a printer by raw TCP 9100, a device path or a spool directory, only on an explicit user action
+
+**Functional — planned (deep dive 2026-11-11, not built)**
+
+- FR8: Preview ↔ source navigation: clicking a drawn element in the preview selects the source range that produced it, and moving the editor cursor into a `^XA … ^XZ` (or EPL) format shows that label in the preview and outlines the ops under the cursor
+- FR9: Restricted Mode support: declare limited Workspace Trust support so the offline features (language support, preview, export, validation, analysis) work in untrusted workspaces, while deploy and printer profiles from workspace settings are available only in trusted workspaces
+- FR10: Density and orientation transforms: rewrite a label's source for another print density (6/8/12/24 dpmm) or rotate it 90/180/270 degrees, scaling field positions, sizes and graphics and reporting every approximation, for both ZPL II and EPL2
+- FR11: Diagnostic quick fixes and rule explanations: each lint rule id links to an explanation (what, why, a fixed example), and rules with a deterministic fix offer it as a VS Code quick fix
+- FR12: PDF sheet layout: export labels onto Letter, Legal, A4, A5 or A6 pages as an N×M grid with alignment and an optional cut border, alongside the current one-label-per-page PDF
 
 **Non-functional**
 

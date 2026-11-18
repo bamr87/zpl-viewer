@@ -9,7 +9,7 @@ The commands that run each layer are in [AGENTS.md § Stack & commands](../AGENT
 1. **Unit (`src/test/unit`)** — parsers, emitters, graphics and image decoders, barcode rules, data pipeline, analysis, importers, deploy transports (including a real loopback socket), and the freshness of the generated `docs/reference/` files.
 2. **Renderer (`src/test/renderer`)** — renders the sample labels and asserts the Canvas 2D calls they produce: positions, sizes, styles and the transform each was made under.
 3. **Integration (`src/test/integration`)** — runs in a real VS Code host: commands, providers, diagnostics, merge and dry-run deploy.
-4. **E2E (`src/test/e2e`)** — drives the compiled preview and barcode-studio webview bundles in Chromium.
+4. **E2E (`src/test/e2e`)** — drives the compiled preview and barcode-studio webview bundles in Chromium. The preview harness is generated from the shipped `preview.html` with its Content-Security-Policy kept, so a bundle change that needs `eval` or an un-nonced script fails here.
 
 Layers 1 and 2 both run under `npm run test:unit`.
 
