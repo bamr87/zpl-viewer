@@ -13,6 +13,7 @@ import {
   normalizeGraphicName,
   StoredGraphic,
 } from './graphics';
+import { MAX_LABEL_GRAPHIC_BYTES, MAX_STORE_BYTES } from '../core/limits';
 import { decodeImage, isSupportedImage } from '../image/decode';
 import { toMonochrome } from '../image/bitmap';
 import {
@@ -84,11 +85,24 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
   // Downloaded graphics live in printer memory, so the store outlives the
   // individual `^XA … ^XZ` labels that recall them.
   const graphics: GraphicStore = new Map();
+  // Decoded `^GF` bytes in the current label, and in the store, so that many
+  // individually acceptable graphics cannot add up to an allocation bomb.
+  let labelGraphicBytes = 0;
+  const storeBytes = (except?: string): number => {
+    let total = 0;
+    for (const [name, graphic] of graphics) {
+      if (name !== except) {
+        total += graphic.bytes.length;
+      }
+    }
+    return total;
+  };
 
   let currentPage: LabelPage | undefined;
   let state: State = freshState();
 
   const startPage = (): void => {
+    labelGraphicBytes = 0;
     state = freshState();
     currentPage = {
       width: Math.round(defaultWidthIn * dpmm * 25.4),
@@ -373,8 +387,13 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
       }
       case '^GF': {
         ensureField(state, token);
-        const image = parseGraphicField(token, warnings);
+        const image = parseGraphicField(
+          token,
+          warnings,
+          MAX_LABEL_GRAPHIC_BYTES - labelGraphicBytes,
+        );
         if (image) {
+          labelGraphicBytes += image.bitmap.length;
           state.field!.image = image;
         } else {
           warnings.push('Failed to decode ^GF graphic field.');
@@ -383,7 +402,11 @@ export function parseZpl(source: string, options: ParseOptions = {}): RenderResu
       }
       case '~DG':
       case '~DY': {
-        const stored = parseDownloadGraphic(token, warnings);
+        const stored = parseDownloadGraphic(
+          token,
+          warnings,
+          MAX_STORE_BYTES - storeBytes(normalizeGraphicName(token.args[0] ?? '')),
+        );
         if (stored) {
           graphics.set(stored.name, stored);
         }
@@ -706,6 +729,7 @@ function clampMagnification(value: number): number {
 function parseGraphicField(
   token: ZplToken,
   warnings: string[],
+  maxBytes: number,
 ): ImageOp | undefined {
   if (token.args.length < 5) {
     return undefined;
@@ -723,8 +747,12 @@ function parseGraphicField(
     data,
     bytesPerRow,
     totalBytes: parseInt(token.args[2] ?? '0', 10) || undefined,
+    maxBytes,
   });
   warnings.push(...decoded.warnings);
+  if (decoded.rejected) {
+    return undefined;
+  }
 
   return {
     type: 'image',
@@ -750,6 +778,7 @@ function parseGraphicField(
 function parseDownloadGraphic(
   token: ZplToken,
   warnings: string[],
+  maxBytes: number,
 ): StoredGraphic | undefined {
   const rawName = token.args[0] ?? '';
   const name = normalizeGraphicName(rawName);
@@ -769,8 +798,12 @@ function parseDownloadGraphic(
       data: token.args.slice(3).join(','),
       bytesPerRow,
       totalBytes,
+      maxBytes,
     });
     warnings.push(...decoded.warnings);
+    if (decoded.rejected) {
+      return undefined;
+    }
     return {
       name,
       bytes: decoded.bytes,
@@ -794,8 +827,12 @@ function parseDownloadGraphic(
       data: payload,
       bytesPerRow,
       totalBytes,
+      maxBytes,
     });
     warnings.push(...decoded.warnings);
+    if (decoded.rejected) {
+      return undefined;
+    }
     return {
       name,
       bytes: decoded.bytes,
@@ -812,8 +849,13 @@ function parseDownloadGraphic(
     data: payload,
     bytesPerRow: 1,
     totalBytes,
+    maxBytes,
+    opaque: true,
   });
   warnings.push(...envelope.warnings);
+  if (envelope.rejected) {
+    return undefined;
+  }
   if (!isSupportedImage(envelope.bytes)) {
     warnings.push(
       `~DY${rawName} stores a "${storedFormat}" image this preview cannot decode.`,
@@ -825,6 +867,10 @@ function parseDownloadGraphic(
       threshold: 128,
       dither: 'none',
     });
+    if (mono.data.length > maxBytes) {
+      warnings.push(`~DY${rawName} skipped: the image exceeds the graphic store limit.`);
+      return undefined;
+    }
     return {
       name,
       bytes: mono.data,

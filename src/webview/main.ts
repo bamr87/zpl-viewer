@@ -37,6 +37,8 @@ interface ExportMessage {
   /** Printer language of the document being exported. */
   labelFormat?: LabelFormatId;
   requestId: string;
+  /** Which label a PNG export renders; 0 when absent. */
+  pageIndex?: number;
   source: string;
   options: {
     dpmm: number;
@@ -124,6 +126,45 @@ try {
 let lastResult: RenderResult | undefined;
 let lastScale = 2;
 let currentPage = 0;
+let lastReported: { page: number; scale: number } | undefined;
+
+interface SavedViewState {
+  page: number;
+  scale: number;
+}
+
+/** Tells the host which label is showing and the zoom, when either changed. */
+function reportViewState(): void {
+  if (
+    lastReported &&
+    lastReported.page === currentPage &&
+    lastReported.scale === lastScale
+  ) {
+    return;
+  }
+  lastReported = { page: currentPage, scale: lastScale };
+  postToHost({ type: 'view-state', page: currentPage, scale: lastScale });
+  vscodeApi?.setState({ page: currentPage, scale: lastScale });
+}
+
+// A reloaded webview starts from what it saved, and tells the host so the next
+// render does not undo it.
+let savedView: SavedViewState | undefined;
+try {
+  const saved = vscodeApi?.getState<Partial<SavedViewState>>();
+  if (
+    saved &&
+    typeof saved.page === 'number' &&
+    Number.isInteger(saved.page) &&
+    saved.page >= 0 &&
+    typeof saved.scale === 'number' &&
+    saved.scale > 0
+  ) {
+    savedView = { page: saved.page, scale: saved.scale };
+  }
+} catch {
+  // No saved state; start fresh.
+}
 
 window.addEventListener('message', (ev: MessageEvent<IncomingMessage>) => {
   const msg = ev.data;
@@ -137,30 +178,81 @@ window.addEventListener('message', (ev: MessageEvent<IncomingMessage>) => {
   }
 });
 
+function nextPage(): void {
+  if (lastResult && currentPage < lastResult.pages.length - 1) {
+    currentPage += 1;
+    paint();
+  }
+}
+
+function previousPage(): void {
+  if (currentPage > 0) {
+    currentPage -= 1;
+    paint();
+  }
+}
+
+function zoomIn(): void {
+  lastScale = Math.min(6, lastScale * 1.25);
+  paint();
+}
+
+function zoomOut(): void {
+  lastScale = Math.max(0.25, lastScale / 1.25);
+  paint();
+}
+
+function zoomReset(): void {
+  lastScale = 2;
+  paint();
+}
+
+// Keyboard paging and zoom while the preview has focus: PageUp/PageDown or
+// Alt+Left/Right for labels, Ctrl/Cmd with + - 0 for zoom.
+window.addEventListener('keydown', (ev: KeyboardEvent) => {
+  const target = ev.target as HTMLElement | null;
+  if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+    return;
+  }
+  const mod = ev.ctrlKey || ev.metaKey;
+  let handled = true;
+  if (!mod && !ev.altKey && ev.key === 'PageDown') {
+    nextPage();
+  } else if (!mod && !ev.altKey && ev.key === 'PageUp') {
+    previousPage();
+  } else if (ev.altKey && !mod && ev.key === 'ArrowRight') {
+    nextPage();
+  } else if (ev.altKey && !mod && ev.key === 'ArrowLeft') {
+    previousPage();
+  } else if (mod && (ev.key === '+' || ev.key === '=')) {
+    zoomIn();
+  } else if (mod && (ev.key === '-' || ev.key === '_')) {
+    zoomOut();
+  } else if (mod && ev.key === '0') {
+    zoomReset();
+  } else {
+    handled = false;
+  }
+  if (handled) {
+    ev.preventDefault();
+  }
+});
+
 document.querySelectorAll<HTMLButtonElement>('button[data-cmd]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const cmd = btn.dataset.cmd;
     if (cmd === 'next') {
-      if (lastResult && currentPage < lastResult.pages.length - 1) {
-        currentPage += 1;
-        paint();
-      }
+      nextPage();
     } else if (cmd === 'prev') {
-      if (currentPage > 0) {
-        currentPage -= 1;
-        paint();
-      }
+      previousPage();
     } else if (cmd === 'refresh') {
       postToHost({ type: 'refresh-request' });
     } else if (cmd === 'zoom-in') {
-      lastScale = Math.min(6, lastScale * 1.25);
-      paint();
+      zoomIn();
     } else if (cmd === 'zoom-out') {
-      lastScale = Math.max(0.25, lastScale / 1.25);
-      paint();
+      zoomOut();
     } else if (cmd === 'zoom-reset') {
-      lastScale = 2;
-      paint();
+      zoomReset();
     } else if (cmd === 'export-png') {
       postToHost({ type: 'run-command', command: 'labelStudio.exportPng' });
     } else if (cmd === 'export-pdf') {
@@ -184,11 +276,15 @@ function renderDocument(msg: RenderMessage): void {
       widthInches: msg.options.widthInches,
       heightInches: msg.options.heightInches,
     });
+    // The first render after a reload prefers what this webview saved; every
+    // later render follows the host, which echoes back what we last reported.
+    const wanted = savedView ?? { page: msg.pageIndex, scale: msg.options.scale };
+    savedView = undefined;
     currentPage = Math.min(
-      Math.max(0, msg.pageIndex),
+      Math.max(0, wanted.page),
       Math.max(0, lastResult.pages.length - 1),
     );
-    lastScale = msg.options.scale;
+    lastScale = wanted.scale;
     paint();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -210,6 +306,7 @@ function paint(): void {
     }
     status.textContent = 'no labels';
     pageLabel.textContent = '0 / 0';
+    canvas.setAttribute('aria-label', 'No renderable labels');
     return;
   }
   if (boot) {
@@ -232,10 +329,17 @@ function paint(): void {
     return;
   }
   pageLabel.textContent = `${currentPage + 1} / ${lastResult.pages.length}`;
+  const warningCount = lastResult.warnings.length;
+  canvas.setAttribute(
+    'aria-label',
+    `Label ${currentPage + 1} of ${lastResult.pages.length}, ${page.width} × ${page.height} dots, ` +
+      `${page.ops.length} element${page.ops.length === 1 ? '' : 's'}, ` +
+      `${warningCount} warning${warningCount === 1 ? '' : 's'}`,
+  );
   status.textContent = lastResult.warnings.length
     ? `${lastResult.warnings.length} warning${lastResult.warnings.length === 1 ? '' : 's'}: ${lastResult.warnings[0]}`
     : `${page.ops.length} op${page.ops.length === 1 ? '' : 's'}  @  ${page.width}×${page.height} dots  ·  scale ${scale.toFixed(2)}x`;
-  vscodeApi?.setState({ page: currentPage, scale });
+  reportViewState();
 }
 
 async function handleExport(msg: ExportMessage): Promise<void> {
@@ -259,7 +363,7 @@ async function handleExport(msg: ExportMessage): Promise<void> {
     }
     const data =
       msg.format === 'png'
-        ? await exportPng(result, barcodes)
+        ? await exportPng(result, barcodes, msg.pageIndex ?? 0)
         : await exportPdf(result, barcodes);
     postToHost({
       type: 'export-result',
@@ -279,8 +383,10 @@ async function handleExport(msg: ExportMessage): Promise<void> {
 async function exportPng(
   result: RenderResult,
   barcodes: BwipBarcodeRenderer,
+  pageIndex: number,
 ): Promise<number[]> {
-  const page = result.pages[0];
+  const page =
+    result.pages[Math.min(Math.max(0, pageIndex), result.pages.length - 1)];
   const off = document.createElement('canvas');
   off.width = page.width;
   off.height = page.height;

@@ -15,7 +15,7 @@ node-only layer   importers/ · deploy/ (net, fs)
 ## Pure modules
 
 ### `core/`
-The keystone. `formats.ts` registers each printer language and detects which one a document is written in; `pipeline.ts` dispatches parse / format / emit / convert on that id; `validate.ts` combines a language's syntax checks with the shared lint rules; `units.ts` converts dots ↔ inches ↔ millimetres; `templates.ts` holds the starter labels; `diagnostics.ts` defines the format-neutral finding shape.
+The keystone. `formats.ts` registers each printer language and detects which one a document is written in; `pipeline.ts` dispatches parse / format / emit / convert on that id; `validate.ts` combines a language's syntax checks with the shared lint rules; `units.ts` converts dots ↔ inches ↔ millimetres; `templates.ts` holds the starter labels; `diagnostics.ts` defines the format-neutral finding shape; `limits.ts` holds the resource caps for untrusted input (graphic dimensions and decoded bytes per graphic, per label and for the `~DG`/`~DY` store, the PNG pixel count, and the `InflateLimitError` thrown when decompression passes its cap).
 
 `inflate.ts` and `base64.ts` are the codecs the rest of the pure layer needs but cannot get from Node: a dependency-free DEFLATE (RFC 1951/1950) and base64. Both exist because `zlib` and `Buffer` are unavailable in the webview, and both the `:Z64:` graphic encoding and the PNG decoder need them there.
 
@@ -27,6 +27,8 @@ Nothing here may import `vscode` — the webview bundle compiles these files.
 `graphics.ts` decodes the four ways ZPL spells a bitmap — plain ASCII hex, the ACS compressed hex with letter run counts and `,` `!` `:` row operators, `:B64:` and `:Z64:` — and models the graphic store that `~DG`/`~DY` fill and `^XG`/`^IM` draw from. It also encodes: the ACS compressor is what keeps an imported logo's `^GF` field small.
 
 `text.ts` holds the glyph metrics every renderer shares. ZPL sizes a character cell and CSS sizes an em; the conversion has to be identical in the canvas preview and the SVG exporter, or a label that fits on screen overflows in the exported file.
+
+Graphic decoding is bounded: `decodeGraphicData` checks the declared geometry against `core/limits.ts` before allocating and `:Z64:` inflation stops at the cap, so a crafted label gets a warning and no graphic rather than an out-of-memory extension host.
 
 Bitmaps are drawn as runs of filled rectangles rather than through `putImageData`, which ignores the canvas transform and would drop the label's home offset, the field rotation and the preview zoom.
 

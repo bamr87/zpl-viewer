@@ -119,7 +119,7 @@ Every user-facing capability has a stable id in the feature catalog [`features/f
 
 ## 7. Roadmap / open questions
 
-- Marketplace publishing plan (release flow: [AGENTS.md § Conventions](AGENTS.md#conventions)): TBD
+- Marketplace publishing plan (release flow: [AGENTS.md § Conventions](AGENTS.md#conventions)): TBD; releases attach a `.vsix` to the GitHub Release until the owner registers a publisher and adds `VSCE_PAT` / `OVSX_PAT`
 
 ## 8. Links
 

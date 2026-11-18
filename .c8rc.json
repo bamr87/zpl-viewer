@@ -1,0 +1,9 @@
+{
+  "exclude": ["src/test/**", "src/webview/**", "out/test/**"],
+  "reporter": ["text-summary", "lcov"],
+  "check-coverage": true,
+  "statements": 85,
+  "lines": 85,
+  "functions": 82,
+  "branches": 70
+}

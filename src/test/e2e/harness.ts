@@ -48,8 +48,12 @@ export async function openHarness(page: Page): Promise<void> {
   await page.waitForSelector('#label', { state: 'attached' });
 }
 
-export async function postRender(page: Page, zpl: string): Promise<void> {
-  const message = makeRenderMessage(zpl);
+export async function postRender(
+  page: Page,
+  zpl: string,
+  overrides?: Parameters<typeof makeRenderMessage>[1],
+): Promise<void> {
+  const message = makeRenderMessage(zpl, overrides);
   await page.evaluate((msg) => {
     window.dispatchEvent(new MessageEvent('message', { data: msg }));
   }, message);
@@ -60,8 +64,9 @@ export async function postExport(
   zpl: string,
   format: 'png' | 'pdf',
   requestId: string,
+  pageIndex?: number,
 ): Promise<void> {
-  const message = makeExportMessage(zpl, format, requestId);
+  const message = makeExportMessage(zpl, format, requestId, pageIndex);
   await page.evaluate((msg) => {
     window.dispatchEvent(new MessageEvent('message', { data: msg }));
   }, message);
