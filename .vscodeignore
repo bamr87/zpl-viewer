@@ -26,3 +26,7 @@ playwright-report/**
 coverage/**
 scripts/**
 .vscode-test.mjs
+.claude/**
+verify/**
+test/**
+features/**

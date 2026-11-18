@@ -80,15 +80,36 @@ jobs:
       pull-requests: write
     secrets: inherit
 
-  publish:
+  # This package is a VS Code extension, not an npm library: the shared
+  # `bamr87/.github` publish.yml would `npm publish` the extension source as
+  # `zpl-viewer` and fail without NPM_TOKEN (issue #48). Package the extension
+  # with vsce and attach the .vsix to the GitHub Release instead.
+  #
+  # Marketplace / Open VSX publishing is deliberately NOT here: it needs a
+  # registered publisher and the owner's VSCE_PAT / OVSX_PAT secrets. Add that
+  # step after this one once they exist.
+  package:
     needs: release
     if: needs.release.outputs.release_created == 'true'
-    uses: bamr87/.github/.github/workflows/publish.yml@v1
-    with:
-      tag: ${{ needs.release.outputs.tag_name }}
-      version: ${{ needs.release.outputs.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
-      packages: write
-      id-token: write
-    secrets: inherit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.tag_name }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Package the extension
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: npx vsce package --no-dependencies --out "zpl-viewer-${VERSION}.vsix"
+      - name: Attach the .vsix to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag_name }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: gh release upload "$TAG" "zpl-viewer-${VERSION}.vsix" --clobber
