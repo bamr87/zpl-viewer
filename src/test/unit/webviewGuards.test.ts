@@ -33,6 +33,25 @@ describe('webviewGuards.parsePreviewMessage', () => {
     }
   });
 
+  it('accepts a view-state report and refuses a malformed one', () => {
+    expect(parsePreviewMessage({ type: 'view-state', page: 2, scale: 1.5 })).to.deep.equal({
+      type: 'view-state',
+      page: 2,
+      scale: 1.5,
+    });
+    for (const bad of [
+      { type: 'view-state', page: -1, scale: 1 },
+      { type: 'view-state', page: 1.5, scale: 1 },
+      { type: 'view-state', page: 0, scale: 0 },
+      { type: 'view-state', page: 0, scale: Infinity },
+      { type: 'view-state', page: 0, scale: 1000 },
+      { type: 'view-state', page: '1', scale: 1 },
+      { type: 'view-state' },
+    ]) {
+      expect(parsePreviewMessage(bad), JSON.stringify(bad)).to.equal(undefined);
+    }
+  });
+
   it('refuses Deploy and any other labelStudio command off the allowlist', () => {
     expect(parsePreviewMessage({ type: 'run-command', command: 'labelStudio.deploy' })).to.equal(undefined);
     expect(parsePreviewMessage({ type: 'run-command', command: 'labelStudio.deployDryRun' })).to.equal(undefined);

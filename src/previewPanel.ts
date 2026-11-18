@@ -36,7 +36,11 @@ export class LabelPreviewManager {
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (affectsLabelStudio(e)) {
+          const zoomChanged = affectsLabelStudio(e, 'preview.initialZoom');
           for (const panel of this.panels.values()) {
+            if (zoomChanged) {
+              panel.resetZoom();
+            }
             void panel.refresh();
           }
         }
@@ -94,6 +98,7 @@ export class LabelPreviewManager {
   async export(
     document: vscode.TextDocument,
     format: 'png' | 'pdf',
+    pageIndex?: number,
   ): Promise<Uint8Array> {
     const key = document.uri.toString();
     let panel = this.panels.get(key);
@@ -109,7 +114,12 @@ export class LabelPreviewManager {
       );
       this.panels.set(key, panel);
     }
-    return panel.exportBytes(format);
+    return panel.exportBytes(format, pageIndex);
+  }
+
+  /** The label the document's open preview is showing, or `undefined` when none is open. */
+  currentPage(document: vscode.TextDocument): number | undefined {
+    return this.panels.get(document.uri.toString())?.currentPage;
   }
 
   async waitForReady(
@@ -153,7 +163,13 @@ export class LabelPreviewManager {
 class LabelPreviewPanel {
   private readonly panel: vscode.WebviewPanel;
   private refreshTimer: NodeJS.Timeout | undefined;
-  private pageIndex = 0;
+  /**
+   * What the webview last reported it is showing. Sent back on every refresh so
+   * an edit, a settings change or the Refresh button does not snap the preview
+   * to label 1 and the initial zoom. Unset until the webview reports, so the
+   * first render (and only the first) uses `preview.initialZoom`.
+   */
+  private viewState: { page: number; scale: number } | undefined;
   private disposed = false;
   private readyPromise: Promise<void>;
   private resolveReady!: () => void;
@@ -211,6 +227,18 @@ class LabelPreviewPanel {
     return this.readyPromise;
   }
 
+  /** Forgets the reported zoom, so the next render uses `preview.initialZoom` again. */
+  resetZoom(): void {
+    if (this.viewState) {
+      this.viewState = { ...this.viewState, scale: getRenderConfig().scale };
+    }
+  }
+
+  /** Zero-based index of the label the preview is showing. */
+  get currentPage(): number | undefined {
+    return this.viewState?.page;
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
@@ -254,12 +282,15 @@ class LabelPreviewPanel {
       type: 'render',
       source: this.document.getText(),
       format: formatOfDocument(this.document),
-      options: cfg,
-      pageIndex: this.pageIndex,
+      options: { ...cfg, scale: this.viewState?.scale ?? cfg.scale },
+      pageIndex: this.viewState?.page ?? 0,
     });
   }
 
-  async exportBytes(format: 'png' | 'pdf'): Promise<Uint8Array> {
+  async exportBytes(
+    format: 'png' | 'pdf',
+    pageIndex?: number,
+  ): Promise<Uint8Array> {
     await this.readyPromise;
     const cfg = getRenderConfig();
     const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -277,6 +308,7 @@ class LabelPreviewPanel {
       format,
       labelFormat: formatOfDocument(this.document),
       requestId,
+      pageIndex: pageIndex ?? this.viewState?.page ?? 0,
       source: this.document.getText(),
       options: {
         dpmm: cfg.dpmm,
@@ -312,6 +344,9 @@ class LabelPreviewPanel {
         break;
       case 'refresh-request':
         void this.refresh();
+        break;
+      case 'view-state':
+        this.viewState = { page: msg.page, scale: msg.scale };
         break;
       case 'log': {
         const level = msg.level.toUpperCase();

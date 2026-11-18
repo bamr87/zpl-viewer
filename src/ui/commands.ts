@@ -375,6 +375,18 @@ async function exportLabel(
     return;
   }
   const editor = { document };
+  // A PNG holds one label: the one the preview is showing, or a pick when the
+  // preview is not open and the file has several.
+  let pageIndex: number | undefined;
+  if (format === 'png') {
+    pageIndex = preview.currentPage(document);
+    if (pageIndex === undefined) {
+      pageIndex = await pickLabelPage(document);
+      if (pageIndex === undefined) {
+        return;
+      }
+    }
+  }
   const defaultUri = editor.document.uri.with({
     path: editor.document.uri.path.replace(/\.[^./]+$/, '') + '.' + format,
   });
@@ -393,7 +405,7 @@ async function exportLabel(
       cancellable: false,
     },
     async () => {
-      const bytes = await preview.export(editor.document, format);
+      const bytes = await preview.export(editor.document, format, pageIndex);
       await vscode.workspace.fs.writeFile(target, bytes);
     },
   );
@@ -405,6 +417,35 @@ async function exportLabel(
   if (choice === open) {
     await vscode.env.openExternal(target);
   }
+}
+
+/**
+ * Asks which label of a multi-label file to export. Returns 0 without asking
+ * for a single label, and `undefined` when the user cancels.
+ */
+async function pickLabelPage(
+  document: vscode.TextDocument,
+): Promise<number | undefined> {
+  const render = getRenderConfig();
+  const parsed = parseLabel(document.getText(), {
+    format: formatOfDocument(document),
+    dpmm: render.dpmm,
+    widthInches: render.widthInches,
+    heightInches: render.heightInches,
+  });
+  if (parsed.pages.length <= 1) {
+    return 0;
+  }
+  const items = parsed.pages.map((page, index) => ({
+    label: `Label ${index + 1}`,
+    description: `${page.width} × ${page.height} dots`,
+    index,
+  }));
+  const picked = await vscode.window.showQuickPick(items, {
+    title: 'Export which label as PNG?',
+    placeHolder: `${items.length} labels in this file`,
+  });
+  return picked?.index;
 }
 
 /**

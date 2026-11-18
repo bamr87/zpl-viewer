@@ -14,6 +14,7 @@ export interface ExportMessage {
   type: 'export';
   format: 'png' | 'pdf';
   requestId: string;
+  pageIndex?: number;
   source: string;
   options: {
     dpmm: number;
@@ -43,11 +44,13 @@ export function makeExportMessage(
   source: string,
   format: 'png' | 'pdf',
   requestId = 'test-request',
+  pageIndex?: number,
 ): ExportMessage {
   return {
     type: 'export',
     format,
     requestId,
+    ...(pageIndex !== undefined ? { pageIndex } : {}),
     source,
     options: {
       dpmm: 8,
