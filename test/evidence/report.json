@@ -1,0 +1,36 @@
+{
+  "schema": "verify-report/v1",
+  "base": "http://127.0.0.1:4099",
+  "generated": "2026-11-18T19:52:19.719Z",
+  "by": "human",
+  "run": null,
+  "total": 2,
+  "passed": 2,
+  "failed": 0,
+  "scenarios": [
+    {
+      "id": "preview-renders-hello",
+      "title": "Preview renders samples/hello.zpl",
+      "features": [
+        "ZPL-002"
+      ],
+      "ok": true,
+      "dir": "test/evidence/preview-renders-hello",
+      "screenshots": [
+        "test/evidence/preview-renders-hello/desktop-preview.png"
+      ]
+    },
+    {
+      "id": "studio-code128",
+      "title": "Barcode Studio encodes Code 128",
+      "features": [
+        "ZPL-003"
+      ],
+      "ok": true,
+      "dir": "test/evidence/studio-code128",
+      "screenshots": [
+        "test/evidence/studio-code128/desktop-studio.png"
+      ]
+    }
+  ]
+}

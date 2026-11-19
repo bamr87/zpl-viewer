@@ -1,0 +1,99 @@
+{
+  "id": "studio-code128",
+  "title": "Barcode Studio encodes Code 128",
+  "features": [
+    "ZPL-003"
+  ],
+  "path": "verify/scenarios/studio-code128.yml",
+  "started": "2026-11-18T19:52:19.037Z",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 800,
+      "ok": true,
+      "steps": [
+        {
+          "step": "goto",
+          "arg": "/src/test/e2e/studio-harness.html",
+          "ok": true,
+          "ms": 526
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "status": 200
+          },
+          "ok": true,
+          "ms": 0
+        },
+        {
+          "step": "select",
+          "arg": {
+            "selector": "#symbology",
+            "value": "code128"
+          },
+          "ok": true,
+          "ms": 25
+        },
+        {
+          "step": "fill",
+          "arg": {
+            "selector": "#data",
+            "value": "LABELSTUDIO-1"
+          },
+          "ok": true,
+          "ms": 33
+        },
+        {
+          "step": "wait",
+          "arg": {
+            "selector": "#snippet"
+          },
+          "ok": true,
+          "ms": 2
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "text": "^BC"
+          },
+          "ok": true,
+          "ms": 1
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "text": "LABELSTUDIO-1"
+          },
+          "ok": true,
+          "ms": 3
+        },
+        {
+          "step": "screenshot",
+          "arg": "studio",
+          "ok": true,
+          "file": "test/evidence/studio-code128/desktop-studio.png",
+          "ms": 27
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "no_console_errors": true
+          },
+          "ok": true,
+          "ms": 0
+        }
+      ],
+      "console_errors": [],
+      "screenshots": [
+        "test/evidence/studio-code128/desktop-studio.png"
+      ],
+      "evals": {},
+      "final_url": "http://127.0.0.1:4099/src/test/e2e/studio-harness.html"
+    }
+  ],
+  "ok": true,
+  "finished": "2026-11-18T19:52:19.698Z",
+  "base": "http://127.0.0.1:4099"
+}

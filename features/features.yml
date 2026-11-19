@@ -35,6 +35,7 @@ features:
     surface: ui
     link: "src/previewPanel.ts"
     docs: "README.md"
+    scenarios: [preview-renders-hello]
   - id: ZPL-003
     title: "Templates, snippets and Barcode Studio"
     description: "Templates, snippets and Barcode Studio (24 symbologies via bwip-js)"
@@ -44,6 +45,7 @@ features:
     surface: infra
     link: "src/barcode"
     docs: "README.md"
+    scenarios: [studio-code128]
   - id: ZPL-004
     title: "Formatters, image import, format conversion"
     description: "Formatters, image import, format conversion; all ZPL graphic encodings"

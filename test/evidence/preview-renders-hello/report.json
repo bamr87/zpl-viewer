@@ -1,0 +1,96 @@
+{
+  "id": "preview-renders-hello",
+  "title": "Preview renders samples/hello.zpl",
+  "features": [
+    "ZPL-002"
+  ],
+  "path": "verify/scenarios/preview-renders-hello.yml",
+  "started": "2026-11-18T19:52:18.154Z",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 800,
+      "ok": true,
+      "steps": [
+        {
+          "step": "goto",
+          "arg": "/src/test/e2e/harness.generated.html",
+          "ok": true,
+          "ms": 604
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "status": 200
+          },
+          "ok": true,
+          "ms": 0
+        },
+        {
+          "step": "eval",
+          "arg": {
+            "name": "render-posted",
+            "script": "(() => {\n  const source = '^XA\\n^CF0,60\\n^FO50,50^FDHello, ZPL!^FS\\n^CF0,30\\n^FO50,130^FDThis is a sample label.^FS\\n^FO50,180^GB700,3,3^FS\\n^FO50,210^BY3,3,120\\n^BCN,120,Y,N,N\\n^FD1234567890^FS\\n^XZ';\n  window.dispatchEvent(new MessageEvent('message', { data: {\n    type: 'render',\n    source,\n    options: { dpmm: 8, widthInches: 4, heightInches: 6, scale: 1 },\n    pageIndex: 0,\n  } }));\n  return true;\n})()\n"
+          },
+          "ok": true,
+          "value": true,
+          "ms": 37
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "visible": "#label"
+          },
+          "ok": true,
+          "ms": 18
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "text": "1 / 1"
+          },
+          "ok": true,
+          "ms": 1
+        },
+        {
+          "step": "eval",
+          "arg": {
+            "name": "canvas-width",
+            "script": "document.getElementById('label').width"
+          },
+          "ok": true,
+          "value": 813,
+          "ms": 0
+        },
+        {
+          "step": "screenshot",
+          "arg": "preview",
+          "ok": true,
+          "file": "test/evidence/preview-renders-hello/desktop-preview.png",
+          "ms": 28
+        },
+        {
+          "step": "expect",
+          "arg": {
+            "no_console_errors": true
+          },
+          "ok": true,
+          "ms": 0
+        }
+      ],
+      "console_errors": [],
+      "screenshots": [
+        "test/evidence/preview-renders-hello/desktop-preview.png"
+      ],
+      "evals": {
+        "render-posted": true,
+        "canvas-width": 813
+      },
+      "final_url": "http://127.0.0.1:4099/src/test/e2e/harness.generated.html"
+    }
+  ],
+  "ok": true,
+  "finished": "2026-11-18T19:52:19.037Z",
+  "base": "http://127.0.0.1:4099"
+}
