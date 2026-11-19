@@ -12,6 +12,7 @@
 // Usage: node scripts/gen-verify-harness.mjs   (run from the repository root)
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export const HARNESS_NONCE = 'test';
 
@@ -44,6 +45,8 @@ export function generateHarness(root = process.cwd()) {
   return generated;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Compare URLs, not `file://${argv[1]}`: on Windows argv[1] is `D:\...`, which
+// never equals import.meta.url (`file:///D:/...`).
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   console.log(generateHarness());
 }

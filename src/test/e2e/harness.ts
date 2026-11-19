@@ -2,6 +2,7 @@ import { Page } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execFileSync } from 'child_process';
+import { pathToFileURL } from 'url';
 import { makeExportMessage, makeRenderMessage } from '../helpers/messages';
 
 /**
@@ -31,7 +32,11 @@ export function harnessFileUrl(): string {
     [path.resolve(process.cwd(), 'scripts/gen-verify-harness.mjs')],
     { cwd: process.cwd(), encoding: 'utf8' },
   );
-  return `file://${output.trim()}`;
+  const generated = output.trim();
+  if (!generated) {
+    throw new Error('scripts/gen-verify-harness.mjs printed no path');
+  }
+  return pathToFileURL(generated).href;
 }
 
 export function readFixture(name: string): string {
