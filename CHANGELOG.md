@@ -2,6 +2,23 @@
 
 All notable changes to the Label Studio extension (formerly ZPL Viewer) will be documented in this file.
 
+## [0.4.0](https://github.com/bamr87/zpl-viewer/compare/zpl-viewer-v0.3.1...zpl-viewer-v0.4.0) (2026-11-18)
+
+
+### Features
+
+* **webview:** accessible names, live regions, keyboard shortcuts and focus styles ([85bfc42](https://github.com/bamr87/zpl-viewer/commit/85bfc4287706d330ca8201663e77c94766553cb0))
+* **webview:** accessible names, live regions, keyboard shortcuts and focus styles ([cb4f4f9](https://github.com/bamr87/zpl-viewer/commit/cb4f4f9ce8708e5dff4be1a292e826c139423d24))
+
+
+### Bug Fixes
+
+* **preview:** keep page and zoom across refreshes and export the label shown ([12e33bd](https://github.com/bamr87/zpl-viewer/commit/12e33bda5c812151b893ad9c59601430ba0c41fb))
+* **preview:** keep page and zoom across refreshes and export the label shown ([a3e047b](https://github.com/bamr87/zpl-viewer/commit/a3e047b1577bfa489c0a59f679ac31f532f81cb6))
+* **release:** package a .vsix instead of npm publish ([0ffffe7](https://github.com/bamr87/zpl-viewer/commit/0ffffe7e618836213e97825f741f8cf6a8678dbf))
+* **release:** package a .vsix instead of npm publish ([5d1c3b2](https://github.com/bamr87/zpl-viewer/commit/5d1c3b264fc81923cf6f6a3397b85c7f19591665))
+* **security:** cap graphic sizes and :Z64: inflation ([8e8be23](https://github.com/bamr87/zpl-viewer/commit/8e8be231bc1368de88204ae6a7ef2b05a748e878))
+
 ## [0.3.1](https://github.com/bamr87/zpl-viewer/compare/zpl-viewer-v0.3.0...zpl-viewer-v0.3.1) (2026-11-18)
 
 
